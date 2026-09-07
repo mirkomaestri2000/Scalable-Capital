@@ -1,0 +1,655 @@
+<title>Riequilibrio Geografico Scalable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F3F1; --surface:#FCFCFB; --surface-2:#F6F7F4; --line:#DCDED8; --line-strong:#C3C6BD;
+  --ink:#171A16; --ink-2:#4A4F47; --ink-3:#767C72;
+  --accent:#0A5F55; --accent-soft:#DCEBE7;
+  --pos:#3F6E2A; --neg:#A6401C; --warn:#8A6A0B;
+  --grid:#E3E5DF;
+  --us:#BF4E1B; --us-soft:#F6E3D8;
+  --dev:#0A8C7E; --dev-soft:#DCEBE7;
+  --emg:#A88410; --emg-soft:#F1E9CE;
+  --unc:#9AA096;
+  --shadow:0 1px 2px rgba(20,25,18,.05), 0 6px 18px -12px rgba(20,25,18,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+    --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#828879;
+    --accent:#3FB3A2; --accent-soft:#17302C;
+    --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227;
+    --grid:#2A2E28;
+    --us:#DE7C52; --us-soft:#3A241B;
+    --dev:#1F9787; --dev-soft:#132C28;
+    --emg:#C9A227; --emg-soft:#2E2712;
+    --unc:#6B7167;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+  --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#828879;
+  --accent:#3FB3A2; --accent-soft:#17302C;
+  --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227;
+  --grid:#2A2E28;
+  --us:#DE7C52; --us-soft:#3A241B;
+  --dev:#1F9787; --dev-soft:#132C28;
+  --emg:#C9A227; --emg-soft:#2E2712;
+  --unc:#6B7167;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px}
+h1,h2,h3,h4{font-family:Archivo,"IBM Plex Sans",system-ui,sans-serif; text-wrap:balance; margin:0}
+h1{font-size:clamp(28px,4.2vw,42px); font-weight:700; letter-spacing:-.025em; line-height:1.07}
+h2{font-size:22px; font-weight:600; letter-spacing:-.014em}
+h3{font-size:15.5px; font-weight:600; letter-spacing:-.008em}
+h4{font-size:13px; font-weight:600; letter-spacing:-.005em}
+p{margin:0}
+.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.eyebrow{font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);}
+.muted{color:var(--ink-2)}
+.small{font-size:13px; line-height:1.5}
+.xs{font-size:12px; line-height:1.45}
+
+header.top{border-bottom:1px solid var(--line); padding:34px 0 24px; margin-bottom:30px}
+.top-row{display:flex; flex-wrap:wrap; gap:18px 32px; align-items:flex-end; justify-content:space-between}
+.stamp{display:inline-flex; align-items:center; gap:8px; padding:5px 11px;
+  border:1px solid var(--line-strong); border-radius:999px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; color:var(--ink-2);}
+.stamp b{color:var(--accent); font-weight:600}
+.theme-btn{font:inherit; font-size:12px; cursor:pointer; color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 12px;}
+.theme-btn:hover{border-color:var(--line-strong); color:var(--ink)}
+.lede{color:var(--ink-2); font-size:15px; max-width:64ch; margin-top:14px}
+
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-top:26px}
+.kpi{background:var(--surface); padding:16px 18px 15px; display:flex; flex-direction:column; gap:4px}
+.kpi .v{font-family:Archivo,sans-serif; font-weight:600; font-size:25px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:11.5px; color:var(--ink-3); line-height:1.35}
+.kpi.hero{background:var(--us-soft)}
+.kpi.hero .v{color:var(--us); font-size:29px}
+
+section{margin-top:54px; scroll-margin-top:16px}
+.sec-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px}
+.sec-head .n{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3)}
+.sec-lede{color:var(--ink-2); font-size:14px; max-width:66ch; margin-top:9px}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:12px}
+.panel-pad{padding:20px 22px}
+.stack{display:flex; flex-direction:column; gap:18px}
+
+/* ---- controls ---- */
+.sim{display:grid; grid-template-columns:minmax(300px,380px) 1fr; gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); margin-top:20px}
+@media(max-width:860px){.sim{grid-template-columns:1fr}}
+.sim > div{background:var(--surface); padding:22px}
+.ctrl-block{display:flex; flex-direction:column; gap:9px; padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--line)}
+.ctrl-block:last-child{border-bottom:none; padding-bottom:0; margin-bottom:0}
+.ctrl-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.slider-val{font-family:Archivo,sans-serif; font-weight:700; font-size:34px; letter-spacing:-.035em;
+  color:var(--us); font-variant-numeric:tabular-nums; line-height:1}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; background:transparent; margin:6px 0; cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:8px; border-radius:99px;
+  background:linear-gradient(90deg,var(--dev) 0%,var(--dev) var(--pos-pct,50%),var(--us) var(--pos-pct,50%),var(--us) 100%);
+  border:1px solid var(--line-strong)}
+input[type=range]::-moz-range-track{height:8px; border-radius:99px;
+  background:linear-gradient(90deg,var(--dev) 0%,var(--dev) var(--pos-pct,50%),var(--us) var(--pos-pct,50%),var(--us) 100%);
+  border:1px solid var(--line-strong)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:22px; height:22px; border-radius:50%;
+  background:var(--surface); border:2.5px solid var(--ink); margin-top:-8px; box-shadow:var(--shadow)}
+input[type=range]::-moz-range-thumb{width:20px; height:20px; border-radius:50%;
+  background:var(--surface); border:2.5px solid var(--ink); box-shadow:var(--shadow)}
+input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent); outline-offset:2px}
+input[type=range]:focus-visible::-moz-range-thumb{outline:2px solid var(--accent); outline-offset:2px}
+.scale{display:flex; justify-content:space-between; font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--ink-3)}
+.scale .mark{position:relative}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{font:inherit; font-size:12.5px; padding:6px 11px; border-radius:8px; cursor:pointer;
+  background:var(--surface-2); border:1px solid var(--line); color:var(--ink-2); transition:.14s}
+.chip:hover{border-color:var(--line-strong); color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:600}
+.chip:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.note{font-size:12px; color:var(--ink-3); line-height:1.45}
+
+/* ---- result readout ---- */
+.readout{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:14px 18px; margin-bottom:20px}
+.ro{display:flex; flex-direction:column; gap:2px}
+.ro .v{font-family:Archivo,sans-serif; font-weight:600; font-size:23px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.ro .k{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3)}
+.ro.acc .v{color:var(--accent)}
+.ro.us .v{color:var(--us)}
+.verdict{border-left:3px solid var(--accent); background:var(--surface-2); padding:12px 15px; border-radius:0 8px 8px 0;
+  font-size:13.5px; color:var(--ink-2); line-height:1.5}
+.verdict b{color:var(--ink); font-weight:600}
+.verdict.warn{border-left-color:var(--warn)}
+.verdict.flat{border-left-color:var(--line-strong)}
+
+/* ---- bars ---- */
+.bars{display:flex; flex-direction:column; gap:7px}
+.bar-row{display:grid; grid-template-columns:minmax(88px,132px) 1fr 62px 82px; gap:10px; align-items:center}
+@media(max-width:620px){.bar-row{grid-template-columns:minmax(78px,104px) 1fr 54px}
+  .bar-row .eur{display:none}}
+.bar-row .lbl{font-size:12.5px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.track{height:15px; background:var(--surface-2); border-radius:4px; position:relative; overflow:visible;
+  border:1px solid var(--line)}
+.fill{height:100%; border-radius:0 3px 3px 0; transition:width .45s cubic-bezier(.22,1,.36,1)}
+.tick{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--ink-3); transition:left .45s cubic-bezier(.22,1,.36,1)}
+.bar-row .pct,.bar-row .eur{font-family:"IBM Plex Mono",monospace; font-size:12px; font-variant-numeric:tabular-nums; text-align:right}
+.bar-row .eur{color:var(--ink-3)}
+.delta-up{color:var(--dev)} .delta-dn{color:var(--us)}
+.over{color:var(--us)} .under{color:var(--dev)}
+
+.strip{display:flex; height:38px; border-radius:9px; overflow:hidden; gap:2px; background:var(--surface)}
+.strip > div{position:relative; display:flex; align-items:center; justify-content:center; min-width:2px; transition:flex-basis .45s cubic-bezier(.22,1,.36,1)}
+.strip .tag{font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:11px}
+.legend span{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-2)}
+.dot{width:10px; height:10px; border-radius:3px; flex:none}
+
+/* ---- tables ---- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:620px}
+th,td{padding:9px 14px; text-align:left; border-bottom:1px solid var(--line)}
+th{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:500; background:var(--surface-2); position:sticky; top:0}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.tot td{background:var(--surface-2); font-weight:600}
+td.n,th.n{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums}
+.isin{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3)}
+.pill{display:inline-block; padding:1.5px 7px; border-radius:99px; font-size:11px; font-weight:600;
+  font-family:"IBM Plex Mono",monospace}
+.pill.sell{background:var(--us-soft); color:var(--us)}
+.pill.buy{background:var(--dev-soft); color:var(--dev)}
+.pill.dev{background:var(--dev-soft); color:var(--dev)}
+.pill.emg{background:var(--emg-soft); color:var(--emg)}
+.pill.usa{background:var(--us-soft); color:var(--us)}
+.heat{display:inline-block; height:7px; border-radius:99px; background:var(--us); vertical-align:middle; margin-right:7px}
+
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin-top:18px}
+.card{border:1px solid var(--line); border-radius:11px; padding:16px 17px; background:var(--surface); display:flex; flex-direction:column; gap:7px}
+.card h4{color:var(--ink)}
+.card .big{font-family:Archivo,sans-serif; font-weight:600; font-size:21px; letter-spacing:-.025em; font-variant-numeric:tabular-nums}
+.card.reco{border-color:var(--accent); background:var(--accent-soft)}
+.card.reco .big{color:var(--accent)}
+
+ul.notes{margin:14px 0 0; padding-left:18px; color:var(--ink-2); font-size:13.5px; line-height:1.6}
+ul.notes li{margin-bottom:7px}
+ul.notes b{color:var(--ink); font-weight:600}
+footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--line); color:var(--ink-3); font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="top-row">
+    <div>
+      <p class="eyebrow">Portafoglio Scalable Capital · Analisi look-through</p>
+      <h1>Riequilibrio geografico</h1>
+    </div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <span class="stamp">Dati al <b id="asof">—</b></span>
+      <button class="theme-btn" id="themeBtn" type="button">Tema</button>
+    </div>
+  </div>
+  <p class="lede">L'esposizione è calcolata sul <strong>mercato sottostante</strong> di ogni titolo in portafoglio, non sul domicilio dello strumento: un ETF irlandese che replica l'S&amp;P 500 conta come esposizione USA. Base di calcolo: la sola componente azionaria.</p>
+  <div class="kpis">
+    <div class="kpi hero"><span class="eyebrow">USA oggi</span><span class="v num" id="k-us">—</span><span class="sub">quota della componente azionaria</span></div>
+    <div class="kpi"><span class="eyebrow">Scostamento vs 50%</span><span class="v num" id="k-dev">—</span><span class="sub" id="k-dev-sub">—</span></div>
+    <div class="kpi"><span class="eyebrow">Base azionaria</span><span class="v num" id="k-base">—</span><span class="sub">classificata per area geografica</span></div>
+    <div class="kpi"><span class="eyebrow">Portafoglio totale</span><span class="v num" id="k-tot">—</span><span class="sub" id="k-tot-sub">—</span></div>
+    <div class="kpi"><span class="eyebrow">Aree con dati</span><span class="v num">13</span><span class="sub">su 20 strumenti azionari</span></div>
+  </div>
+</header>
+
+<section id="attuale">
+  <div class="sec-head"><span class="n">01</span><h2>Ripartizione attuale per area</h2></div>
+  <p class="sec-lede">La colonna <em>target</em> deriva dal solo vincolo che hai fissato — USA al 50% — riscalando proporzionalmente tutte le altre aree, così che l'esposizione azionaria complessiva resti invariata. È il target che si ottiene riducendo gli USA in modo neutro, senza scommettere su una particolare area.</p>
+  <div class="tbl-wrap" style="margin-top:18px">
+    <table>
+      <thead><tr>
+        <th>Area</th><th>Blocco</th><th class="n">Peso attuale</th><th class="n">Valore</th>
+        <th class="n">Target</th><th class="n">Scostamento</th><th class="n">Δ in euro</th>
+      </tr></thead>
+      <tbody id="tb-current"></tbody>
+    </table>
+  </div>
+  <div class="panel panel-pad" style="margin-top:18px">
+    <h3>Sviluppati, emergenti e Stati Uniti</h3>
+    <div class="strip" id="strip-macro" style="margin-top:12px"></div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--us)"></i>Stati Uniti</span>
+      <span><i class="dot" style="background:var(--dev)"></i>Altri sviluppati</span>
+      <span><i class="dot" style="background:var(--emg)"></i>Emergenti</span>
+      <span><i class="dot" style="background:var(--unc)"></i>Non classificato</span>
+    </div>
+  </div>
+</section>
+
+<section id="simulatore">
+  <div class="sec-head"><span class="n">02</span><h2>Simulatore</h2></div>
+  <p class="sec-lede">Sposta lo slider per fissare la quota USA che vuoi. Il portafoglio resta interamente azionario: ogni euro tolto agli Stati Uniti viene reinvestito nella destinazione scelta, non lasciato in liquidità.</p>
+
+  <div class="sim">
+    <div>
+      <div class="ctrl-block">
+        <div class="ctrl-head">
+          <label class="eyebrow" for="slider">Quota USA obiettivo</label>
+          <span class="slider-val" id="tgt-val">50,0%</span>
+        </div>
+        <input type="range" id="slider" min="35" max="75" step="0.5" value="50" aria-label="Quota USA obiettivo">
+        <div class="scale"><span>35%</span><span>oggi 60,2%</span><span>75%</span></div>
+        <div class="chips" style="margin-top:4px">
+          <button class="chip" type="button" data-preset="40">40%</button>
+          <button class="chip" type="button" data-preset="45">45%</button>
+          <button class="chip" type="button" data-preset="50">50%</button>
+          <button class="chip" type="button" data-preset="55">55%</button>
+          <button class="chip" type="button" data-preset="60.2">Oggi</button>
+        </div>
+      </div>
+
+      <div class="ctrl-block">
+        <span class="eyebrow">Come ci arrivi</span>
+        <div class="chips" id="mode-chips">
+          <button class="chip" type="button" data-mode="plan" aria-pressed="true">Solo piano di accumulo</button>
+          <button class="chip" type="button" data-mode="mix" aria-pressed="false">Misto</button>
+          <button class="chip" type="button" data-mode="sell" aria-pressed="false">Vendi e ricompra</button>
+        </div>
+        <p class="note" id="mode-note"></p>
+      </div>
+
+      <div class="ctrl-block" id="dest-block">
+        <span class="eyebrow">Dove reinvesti</span>
+        <div class="chips" id="dest-chips"></div>
+        <p class="note" id="dest-note"></p>
+      </div>
+
+      <div class="ctrl-block" id="order-block" hidden>
+        <span class="eyebrow">Ordine di vendita</span>
+        <div class="chips" id="order-chips">
+          <button class="chip" type="button" data-order="sat" aria-pressed="true">Prima i satelliti</button>
+          <button class="chip" type="button" data-order="eff" aria-pressed="false">Efficienza massima</button>
+        </div>
+        <p class="note" id="order-note"></p>
+      </div>
+    </div>
+
+    <div>
+      <div class="readout">
+        <div class="ro us"><span class="k">USA dopo</span><span class="v num" id="r-us">—</span></div>
+        <div class="ro"><span class="k">Variazione</span><span class="v num" id="r-delta">—</span></div>
+        <div class="ro acc"><span class="k" id="r-move-k">Da movimentare</span><span class="v num" id="r-move">—</span></div>
+        <div class="ro"><span class="k" id="r-x-k">Tempo</span><span class="v num" id="r-x">—</span></div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+
+      <h3 style="margin-top:24px">Ripartizione dopo il riequilibrio</h3>
+      <p class="xs muted" style="margin-top:3px" id="bars-cap">Barra piena = dopo. Tacca verticale = posizione di oggi.</p>
+      <div class="bars" id="bars-after" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:30px">Azioni di riequilibrio</h3>
+  <p class="sec-lede" id="actions-lede"></p>
+  <div class="tbl-wrap" style="margin-top:14px">
+    <table>
+      <thead><tr><th>Operazione</th><th>Strumento</th><th class="n">Quota USA</th><th class="n">Importo</th><th class="n">Effetto su USA</th></tr></thead>
+      <tbody id="tb-actions"></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="origine">
+  <div class="sec-head"><span class="n">03</span><h2>Da dove arriva l'esposizione USA</h2></div>
+  <p class="sec-lede">Un solo strumento — l'ETF core su cui versi il piano di accumulo — genera l'82% di tutta la tua esposizione americana. Le tre posizioni S&amp;P 500 separate ne aggiungono un altro 10%: sono il pezzo più facile da tagliare, perché sono quasi puro USA e non portano diversificazione che tu non abbia già.</p>
+  <div class="tbl-wrap" style="margin-top:18px">
+    <table>
+      <thead><tr><th>Strumento</th><th class="n">Valore</th><th class="n">Quota USA</th><th class="n">USA in euro</th><th class="n">% dell'esposizione USA</th></tr></thead>
+      <tbody id="tb-origin"></tbody>
+    </table>
+  </div>
+</section>
+
+<section id="metodo">
+  <div class="sec-head"><span class="n">04</span><h2>Metodo, assunzioni e cosa non torna</h2></div>
+  <div class="cards">
+    <div class="card reco">
+      <h4>Il punto che conta</h4>
+      <p class="small">Il piano di accumulo da 1.000 €/mese versa oggi su un ETF che è per il <b>63,6%</b> USA. Lasciato com'è, spinge la quota americana <em>verso l'alto</em>, non verso il basso: qualsiasi vendita fatta oggi viene erosa mese dopo mese.</p>
+      <p class="small">Cambiare la destinazione del piano è l'unica leva che costa zero in commissioni e zero in tasse.</p>
+    </div>
+    <div class="card">
+      <h4>Il costo fiscale delle vendite</h4>
+      <p class="small">In Italia le plusvalenze su ETF sono redditi di capitale, tassate al 26% e <b>non compensabili</b> con minusvalenze pregresse. Vendere 4.968 € di ETF in guadagno può costare diverse centinaia di euro di imposta immediata.</p>
+      <p class="small muted xs">Non ho accesso al tuo prezzo di carico: la stima del costo fiscale la devi fare tu sul singolo lotto.</p>
+    </div>
+    <div class="card">
+      <h4>Cosa non ho considerato</h4>
+      <p class="small">Prezzi fermi a oggi: la simulazione non modella crescita né volatilità. Su 8 mesi il mercato può muovere la quota USA di più di quanto la muova il tuo piano di accumulo.</p>
+      <p class="small">L'oro (293,95 €) e l'ETF Frontier (26,69 €) restano fuori dalla base di calcolo.</p>
+    </div>
+  </div>
+  <ul class="notes">
+    <li><b>Classificazione per mercato sottostante.</b> Le percentuali arrivano dall'analisi look-through di Scalable, che scompone ogni ETF nei paesi delle società detenute. Nessuno strumento è classificato per domicilio: Vanguard S&amp;P 500 è ISIN irlandese e conta 99,5% USA; Ferrari è ISIN olandese e conta 0% USA.</li>
+    <li><b>Base di calcolo.</b> 38.741,78 € su un patrimonio di 39.062,42 €. Restano fuori l'ETC sull'oro (asset class alternativa) e lo Xtrackers Frontier, per cui Scalable non fornisce scomposizione regionale.</li>
+    <li><b>Asia sviluppata al 8,9%.</b> Scalable classifica Corea e Taiwan tra i mercati sviluppati. Se usassi la classificazione MSCI standard, parte di quel blocco si sposterebbe negli emergenti e la tua quota emergenti reale sarebbe più alta del 9,6% mostrato qui.</li>
+    <li><b>Il MSCI World ex USA non esiste a costo zero.</b> Comprarlo significa aggiungere un ETF al portafoglio e, se poi ci sposti anche il piano di accumulo, gestire due core invece di uno. È il prezzo da pagare per separare la leva "quanto USA" dalla leva "quanto azionario".</li>
+    <li><b>Il target del 50% è una scelta, non un'ottimizzazione.</b> Gli USA pesano circa il 64% dell'indice mondiale: portarli al 50% è una scommessa attiva contro il mercato. Legittima, ma va tenuta per anni per avere senso — non riequilibrata al primo storno.</li>
+  </ul>
+</section>
+
+<footer>
+  Elaborazione su dati Scalable Capital · portafoglio <span class="num" id="pf-id"></span> · analisi look-through aggiornata al <span id="asof2"></span>, quotazioni al <span id="qasof"></span>.<br>
+  Documento di analisi personale. Non è consulenza finanziaria: nessun ordine viene inviato da questa pagina.
+</footer>
+</div>
+
+<script>
+const D = {"asOf":"2026-09-07T13:36:24Z","quotesAsOf":"2026-09-07T15:01Z","portfolioId":"ix6zLKSoC58GsNDFaC7j5Z","equityBase":38741.78,"gold":293.95,"unclassifiedEquity":26.69,"totalPortfolio":39062.42,"targetDefault":0.5,"regions":[{"key":"unitedStates","label":"Stati Uniti","macro":"developed","value":23338.35,"weight":0.6024080594},{"key":"eurozone","label":"Eurozona","macro":"developed","value":2862.84,"weight":0.0738953443},{"key":"asiaDeveloped","label":"Asia sviluppata","macro":"developed","value":3460.55,"weight":0.0893233847},{"key":"japan","label":"Giappone","macro":"developed","value":1705.4,"weight":0.044019753},{"key":"europeExEuro","label":"Europa non-euro","macro":"developed","value":1164.52,"weight":0.0300585116},{"key":"unitedKingdom","label":"Regno Unito","macro":"developed","value":987.75,"weight":0.0254957492},{"key":"canada","label":"Canada","macro":"developed","value":1010.98,"weight":0.0260952392},{"key":"australasia","label":"Australasia","macro":"developed","value":473.24,"weight":0.012215146},{"key":"asiaEmerging","label":"Asia emergente","macro":"emerging","value":2522.26,"weight":0.0651045247},{"key":"latinAmerica","label":"America Latina","macro":"emerging","value":495.19,"weight":0.0127816927},{"key":"middleEast","label":"Medio Oriente","macro":"emerging","value":394.63,"weight":0.0101861604},{"key":"africa","label":"Africa","macro":"emerging","value":182.11,"weight":0.0047005914},{"key":"europeEmerging","label":"Europa emergente","macro":"emerging","value":137.41,"weight":0.0035468358},{"key":"uncategorized","label":"Non classificato","macro":"uncategorized","value":6.55,"weight":0.0001690081}],"holdings":[{"isin":"LU2903252349","name":"Scalable MSCI AC World Xtrackers (Acc)","value":30107.29,"usPct":0.636100000123416,"type":"etf","regions":{"unitedStates":19151.2468,"asiaDeveloped":1923.8558,"eurozone":2212.8858,"japan":1520.4181,"europeExEuro":1071.8195,"canada":909.2401,"unitedKingdom":909.2401,"australasia":451.6093,"asiaEmerging":1267.5169,"latinAmerica":279.9978,"middleEast":234.8369,"africa":96.3433,"europeEmerging":72.2575,"uncategorized":6.0215}},{"isin":"IE00BTJRMP35","name":"Xtrackers MSCI Emerging Markets (Acc)","value":1992.5,"usPct":0.010098989540482255,"type":"etf","regions":{"unitedStates":20.1223,"asiaDeveloped":944.5518,"eurozone":12.1531,"asiaEmerging":695.7129,"latinAmerica":132.8867,"middleEast":92.6422,"africa":53.3938,"europeEmerging":41.0415}},{"isin":"IE00BFMXXD54","name":"Vanguard S&P 500 (Acc)","value":1796.35,"usPct":0.9949999985657961,"type":"etf","regions":{"unitedStates":1787.3656,"eurozone":0.7185,"europeExEuro":4.8501,"unitedKingdom":0.5389,"asiaEmerging":1.6167,"latinAmerica":1.0778,"uncategorized":0.1796}},{"isin":"IE00BP3QZ825","name":"iShares Edge MSCI World Momentum Factor (Acc)","value":1310.55,"usPct":0.5642000012238478,"type":"etf","regions":{"unitedStates":739.4104,"asiaDeveloped":24.1141,"eurozone":146.7812,"japan":149.0091,"europeExEuro":64.6099,"canada":90.0346,"unitedKingdom":65.7894,"australasia":15.5955,"asiaEmerging":1.8348,"latinAmerica":3.0143,"middleEast":10.2223,"europeEmerging":0.1311}},{"isin":"LU1681045370","name":"Amundi MSCI Emerging Markets Swap EUR (Acc)","value":730.51,"usPct":0.010099999882264359,"type":"etf","regions":{"unitedStates":7.3781,"asiaDeveloped":346.1144,"eurozone":4.6752,"asiaEmerging":254.9471,"latinAmerica":49.017,"middleEast":34.1147,"africa":19.5776,"europeEmerging":14.464,"uncategorized":0.2192}},{"isin":"IE00B5BMR087","name":"iShares Core S&P 500 (Acc)","value":450.79,"usPct":0.9949999911479018,"type":"etf","regions":{"unitedStates":448.5322,"eurozone":0.1803,"europeExEuro":1.2171,"unitedKingdom":0.1352,"asiaEmerging":0.4057,"latinAmerica":0.2705,"uncategorized":0.0451}},{"isin":"IE00BKM4GZ66","name":"iShares Core MSCI Emerging Markets IMI (Acc)","value":399.59,"usPct":0.009000002966755872,"type":"etf","regions":{"unitedStates":3.5963,"asiaDeveloped":185.172,"eurozone":2.5574,"unitedKingdom":0.0799,"asiaEmerging":141.6961,"latinAmerica":26.9726,"middleEast":19.2205,"africa":11.2686,"europeEmerging":9.0308}},{"isin":"NL0011585146","name":"Ferrari","value":362.76,"usPct":0.0,"type":"stock","regions":{"eurozone":362.7554}},{"isin":"US5951121038","name":"Micron Technology","value":312.86,"usPct":1.0,"type":"stock","regions":{"unitedStates":312.8596}},{"isin":"IE00BGV5VN51","name":"Xtrackers Artificial Intelligence & Big Data (Acc)","value":300.77,"usPct":0.8316999987724341,"type":"etf","regions":{"unitedStates":250.1465,"asiaDeveloped":25.8658,"eurozone":6.1055,"japan":2.5866,"canada":0.3609,"unitedKingdom":0.5113,"asiaEmerging":14.7074,"middleEast":0.4812}},{"isin":"IE00BYZK4552","name":"iShares Automation & Robotics (Acc)","value":153.02,"usPct":0.5822999884496076,"type":"etf","regions":{"unitedStates":89.1015,"asiaDeveloped":5.4627,"eurozone":15.5771,"japan":22.3863,"europeExEuro":11.3079,"canada":4.6364,"unitedKingdom":1.7444,"australasia":0.6427,"asiaEmerging":1.5761,"latinAmerica":0.2907,"middleEast":0.2754,"uncategorized":0.0153}},{"isin":"US70450Y1038","name":"PayPal Holdings","value":141.23,"usPct":1.0,"type":"stock","regions":{"unitedStates":141.2278}},{"isin":"US84615Q1031","name":"SpaceX","value":129.01,"usPct":1.0,"type":"stock","regions":{"unitedStates":129.0142}},{"isin":"IE00BZCQB185","name":"iShares MSCI India (Acc)","value":113.11,"usPct":0.0,"type":"etf","regions":{"asiaEmerging":113.1143}},{"isin":"IE00BYZK4669","name":"iShares Ageing Population (Acc)","value":111.39,"usPct":0.5262999514077814,"type":"etf","regions":{"unitedStates":58.6238,"asiaDeveloped":4.6895,"eurozone":8.6215,"japan":7.0509,"europeExEuro":7.2625,"canada":3.7538,"unitedKingdom":5.2241,"australasia":4.1771,"asiaEmerging":5.7811,"latinAmerica":1.5149,"middleEast":2.6399,"africa":1.526,"europeEmerging":0.479,"uncategorized":0.0446}},{"isin":"IE00BYXG2H39","name":"iShares Nasdaq US Biotechnology (Acc)","value":108.47,"usPct":0.946699968717273,"type":"etf","regions":{"unitedStates":102.6932,"asiaDeveloped":0.0976,"eurozone":2.2346,"europeExEuro":0.5424,"canada":0.6075,"unitedKingdom":2.137,"australasia":0.0542,"asiaEmerging":0.0651,"middleEast":0.0325,"uncategorized":0.0108}},{"isin":"IT0004764699","name":"Brunello Cucinelli","value":81.94,"usPct":0.0,"type":"stock","regions":{"eurozone":81.9416}},{"isin":"IE00B4L5Y983","name":"iShares Core MSCI World (Acc)","value":68.5,"usPct":0.7198000115487149,"type":"etf","regions":{"unitedStates":49.3076,"asiaDeveloped":0.6234,"eurozone":5.6308,"japan":3.9526,"europeExEuro":2.7812,"canada":2.3428,"unitedKingdom":2.3359,"australasia":1.1577,"asiaEmerging":0.0822,"latinAmerica":0.1096,"middleEast":0.1644,"europeEmerging":0.0068,"uncategorized":0.0068}},{"isin":"IE00B3ZW0K18","name":"iShares S&P 500 EUR Hedged (Acc)","value":47.98,"usPct":0.9949000371757897,"type":"etf","regions":{"unitedStates":47.7347,"eurozone":0.0192,"europeExEuro":0.1295,"unitedKingdom":0.0144,"asiaEmerging":0.0432,"latinAmerica":0.0336,"uncategorized":0.0048}},{"isin":"LU0514694370","name":"Xtrackers MSCI Malaysia (Acc)","value":23.17,"usPct":0.0,"type":"etf","regions":{"asiaEmerging":23.1658}}],"destinations":[{"id":"exus","label":"ACWI ex-USA (neutro)","isin":"IE0006WW1TQ4 + IE00BKM4GZ66","note":"Xtrackers MSCI World ex USA ~82% + iShares Core MSCI EM IMI ~18%. Replica il profilo ex-USA gia presente nel tuo ETF core: taglia gli USA senza alterare i pesi relativi delle altre aree.","regions":{"asiaDeveloped":0.175694,"eurozone":0.20209,"japan":0.138851,"europeExEuro":0.097883,"canada":0.083035,"unitedKingdom":0.083035,"australasia":0.041243,"asiaEmerging":0.115755,"latinAmerica":0.025571,"middleEast":0.021446,"africa":0.008798,"europeEmerging":0.006599}},{"id":"devexus","label":"Solo sviluppati ex-USA","isin":"IE0006WW1TQ4","note":"Xtrackers MSCI World ex USA (Acc). Europa, Giappone, Canada, Asia sviluppata. Nessun emergente aggiunto.","regions":{"asiaDeveloped":0.213784,"eurozone":0.245902,"japan":0.168953,"europeExEuro":0.119103,"canada":0.101037,"unitedKingdom":0.101037,"australasia":0.050184}},{"id":"europe","label":"Europa","isin":"IE00B4K48X80","note":"iShares Core MSCI Europe (Acc). Concentra il riequilibrio sull'area che gia conosci meglio, ma aumenta il rischio di singola area.","regions":{"eurozone":0.527638,"europeExEuro":0.255564,"unitedKingdom":0.216798}},{"id":"em","label":"Emergenti (gia in portafoglio)","isin":"IE00BKM4GZ66","note":"iShares Core MSCI EM IMI (Acc). Non serve aprire nuove posizioni, ma gonfia molto il peso degli emergenti.","regions":{"asiaDeveloped":0.467608,"eurozone":0.006458,"unitedKingdom":0.000202,"asiaEmerging":0.35782,"latinAmerica":0.068113,"middleEast":0.048537,"africa":0.028456,"europeEmerging":0.022805}}],"savingsPlan":{"amount":1000,"isin":"LU2903252349","name":"Scalable MSCI AC World Xtrackers (Acc)","frequency":"MONTHLY","dayOfMonth":10,"nextExecution":"2026-09-10","usPct":0.636100000123416},"labels":{"unitedStates":"Stati Uniti","asiaDeveloped":"Asia sviluppata","eurozone":"Eurozona","japan":"Giappone","europeExEuro":"Europa non-euro","canada":"Canada","unitedKingdom":"Regno Unito","australasia":"Australasia","asiaEmerging":"Asia emergente","latinAmerica":"America Latina","middleEast":"Medio Oriente","africa":"Africa","europeEmerging":"Europa emergente","uncategorized":"Non classificato"},"order":["unitedStates","eurozone","asiaDeveloped","japan","europeExEuro","unitedKingdom","canada","australasia","asiaEmerging","latinAmerica","middleEast","africa","europeEmerging","uncategorized"]};
+const EUR = n => n.toLocaleString('it-IT',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' €';
+const EUR2 = n => n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+const PCT = (n,d=1) => (n*100).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}) + '%';
+const SGN = (n,d=1) => (n>=0?'+':'−') + Math.abs(n*100).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}) + ' pp';
+const H = Object.fromEntries(D.holdings.map(h=>[h.isin,h]));
+const BASE = D.equityBase;
+const CUR_US = D.regions[0].value / BASE;
+const PLAN = D.savingsPlan;
+const macroColor = m => m==='developed' ? 'var(--dev)' : m==='emerging' ? 'var(--emg)' : 'var(--unc)';
+const regColor = r => r==='unitedStates' ? 'var(--us)' : macroColor(D.regions.find(x=>x.key===r).macro);
+
+/* ---------- reference lists ---------- */
+const SAT_ORDER = ['IE00BFMXXD54','IE00B5BMR087','IE00B3ZW0K18','IE00BYXG2H39','IE00BGV5VN51',
+                   'IE00BP3QZ825','IE00BYZK4552','IE00BYZK4669','IE00B4L5Y983','LU2903252349'];
+const EFF_ORDER = D.holdings.filter(h=>h.usPct>0.02).sort((a,b)=>b.usPct-a.usPct).map(h=>h.isin);
+const PURE_US   = D.holdings.filter(h=>h.usPct>=0.90 && h.type==='etf').sort((a,b)=>b.usPct-a.usPct).map(h=>h.isin);
+const US_BUY    = 'IE00BFMXXD54';
+const NONUS_ORDER = D.holdings.filter(h=>h.usPct<0.35).sort((a,b)=>a.usPct-b.usPct).map(h=>h.isin)
+                    .concat(['LU2903252349']);
+
+/* ---------- state ---------- */
+let S = { target: 0.50, mode: 'plan', dest: 'exus', order: 'sat' };
+
+/* ---------- engine ---------- */
+function destVec(){
+  if (S.target > CUR_US) return { label:'Vanguard S&P 500 (Acc)', isin:US_BUY, usPct:H[US_BUY].usPct,
+                                  regions: normalize(H[US_BUY].regions) };
+  const d = D.destinations.find(x=>x.id===S.dest);
+  return { label:d.label, isin:d.isin, usPct:0, regions:d.regions, note:d.note };
+}
+function normalize(v){ const s=Object.values(v).reduce((a,b)=>a+b,0); const o={};
+  for(const k in v) o[k]=v[k]/s; return o; }
+
+/* sell `amount` of holding i, buy same amount of destination */
+function simulate(){
+  const dest = destVec();
+  const up = S.target > CUR_US;
+  const gap = (S.target - CUR_US) * BASE;          // euro of US to add (+) or remove (−)
+  const order = up ? NONUS_ORDER : (S.mode==='mix' ? PURE_US : (S.order==='sat'? SAT_ORDER : EFF_ORDER));
+  const acts = [];
+  let done = 0;                                     // euro of US moved so far
+  const need = Math.abs(gap);
+
+  if (S.mode !== 'plan' && Math.abs(gap) > 1) {
+    for (const isin of order){
+      if (need - done <= 0.5) break;
+      const h = H[isin];
+      const per = Math.abs(dest.usPct - h.usPct);   // US moved per euro traded
+      if (per < 0.02) continue;
+      const amt = Math.min(h.value, (need - done)/per);
+      if (amt < 1) continue;
+      acts.push({isin, name:h.name, amt, usPct:h.usPct, eff: amt*per*(up?1:-1)});
+      done += amt*per;
+    }
+  }
+
+  // remaining gap handled by the savings plan
+  const residual = gap === 0 ? 0 : (gap>0 ? need-done : -(need-done));
+  const usAfterTrades = D.regions[0].value + (up ? done : -done);
+  let months = null, planTarget = null;
+  if (S.mode !== 'sell' && Math.abs(residual) > 1){
+    const p = dest.usPct;
+    const t = S.target;
+    const denom = PLAN.amount * (p - t);
+    months = (t*BASE - usAfterTrades) / denom;
+    if (!isFinite(months) || months < 0) months = null;
+    planTarget = dest;
+  }
+
+  // regional vector after trades (savings plan effect is shown separately in time, not in the bars)
+  const after = {};
+  D.regions.forEach(r => after[r.key] = r.value);
+  const traded = acts.reduce((a,x)=>a+x.amt,0);
+  acts.forEach(a=>{ const h=H[a.isin];
+    for(const k in h.regions) after[k] = (after[k]||0) - h.regions[k]*(a.amt/h.value); });
+  for(const k in dest.regions) after[k] = (after[k]||0) + dest.regions[k]*traded;
+
+  // savings-plan phase: the target is reached only once these months of contributions land
+  const inflow = months !== null ? months * PLAN.amount : 0;
+  if (inflow > 0) for(const k in dest.regions) after[k] = (after[k]||0) + dest.regions[k]*inflow;
+  const finalBase = BASE + inflow;
+
+  return {dest, up, gap, acts, traded, usAfterTrades, months, residual, after, finalBase, inflow,
+          reachedBySell: Math.abs(residual)<=1};
+}
+
+/* ---------- rendering ---------- */
+function renderCurrent(){
+  const scale = (1 - 0.50) / (1 - CUR_US);
+  document.getElementById('tb-current').innerHTML = D.regions.map(r=>{
+    const w = r.weight;
+    const tw = r.key==='unitedStates' ? 0.50 : w*scale;
+    const dw = w - tw, de = r.value - tw*BASE;
+    const flat = Math.abs(dw) < 0.00005;
+    const cls = flat ? '' : (dw>0 ? 'over' : 'under');
+    const mp = r.macro==='developed'?'dev':r.macro==='emerging'?'emg':'';
+    const badge = r.key==='unitedStates' ? '<span class="pill usa">USA</span>'
+      : mp ? `<span class="pill ${mp}">${r.macro==='developed'?'Sviluppato':'Emergente'}</span>` : '<span class="xs muted">n.d.</span>';
+    return `<tr>
+      <td><span class="heat" style="width:${Math.max(3,w*90)}px"></span>${r.label}</td>
+      <td>${badge}</td>
+      <td class="n">${PCT(w,2)}</td>
+      <td class="n">${EUR2(r.value)}</td>
+      <td class="n muted">${PCT(tw,2)}</td>
+      <td class="n ${cls}"><b>${flat?'—':SGN(dw,2)}</b></td>
+      <td class="n ${cls}">${flat?'—':(de>=0?'+':'−')+EUR(Math.abs(de))}</td>
+    </tr>`;}).join('');
+
+  const groups = [
+    {k:'us',  lbl:'USA',        v:D.regions[0].value, c:'var(--us)'},
+    {k:'dev', lbl:'Sviluppati', v:D.regions.filter(r=>r.macro==='developed'&&r.key!=='unitedStates').reduce((a,r)=>a+r.value,0), c:'var(--dev)'},
+    {k:'emg', lbl:'Emergenti',  v:D.regions.filter(r=>r.macro==='emerging').reduce((a,r)=>a+r.value,0), c:'var(--emg)'},
+    {k:'unc', lbl:'n.c.',       v:D.regions.filter(r=>r.macro==='uncategorized').reduce((a,r)=>a+r.value,0)+D.unclassifiedEquity, c:'var(--unc)'}];
+  document.getElementById('strip-macro').innerHTML = groups.map(g=>
+    `<div style="flex:${g.v} 1 0; background:${g.c}" title="${g.lbl} ${EUR2(g.v)}">
+       ${g.v/BASE>0.05?`<span class="tag">${g.lbl} ${PCT(g.v/BASE,1)}</span>`:''}</div>`).join('');
+}
+
+function renderOrigin(){
+  const us = D.regions[0].value;
+  const rows = D.holdings.filter(h=>h.usPct>0.005).sort((a,b)=>b.usPct*b.value - a.usPct*a.value);
+  document.getElementById('tb-origin').innerHTML = rows.map(h=>{
+    const ue = h.value*h.usPct;
+    return `<tr>
+      <td>${h.name}${h.type==='stock'?' <span class="xs muted">· azione</span>':''}<br><span class="isin">${h.isin}</span></td>
+      <td class="n">${EUR2(h.value)}</td>
+      <td class="n">${PCT(h.usPct,1)}</td>
+      <td class="n">${EUR2(ue)}</td>
+      <td class="n"><span class="heat" style="width:${Math.max(2,ue/us*160)}px"></span> ${PCT(ue/us,1)}</td>
+    </tr>`;}).join('') +
+    `<tr class="tot"><td>Totale esposizione USA</td><td class="n">—</td><td class="n">—</td><td class="n">${EUR2(us)}</td><td class="n">100,0%</td></tr>`;
+}
+
+function renderSim(){
+  const R = simulate();
+  const usAfter = R.usAfterTrades / BASE;
+  const finalUs = R.months !== null ? S.target : usAfter;
+
+  document.getElementById('tgt-val').textContent = PCT(S.target,1);
+  document.documentElement.style.setProperty('--pos-pct', ((S.target-0.35)/0.40*100)+'%');
+  document.getElementById('r-us').textContent = PCT(finalUs,1);
+  document.getElementById('r-delta').textContent = SGN(finalUs - CUR_US,1);
+
+  const moveK = document.getElementById('r-move-k'), moveV = document.getElementById('r-move');
+  const xK = document.getElementById('r-x-k'), xV = document.getElementById('r-x');
+
+  if (S.mode === 'plan'){
+    moveK.textContent = 'Da vendere'; moveV.textContent = '0 €';
+    xK.textContent = 'Tempo necessario';
+    xV.textContent = R.months === null ? '—' : R.months.toLocaleString('it-IT',{maximumFractionDigits:1}) + ' mesi';
+  } else {
+    moveK.textContent = 'Da movimentare'; moveV.textContent = EUR(R.traded);
+    if (R.months !== null){ xK.textContent = 'Poi, con l’accumulo';
+      xV.textContent = R.months.toLocaleString('it-IT',{maximumFractionDigits:1}) + ' mesi'; }
+    else { xK.textContent = 'Turnover'; xV.textContent = PCT(R.traded/BASE,1); }
+  }
+
+  /* verdict */
+  const v = document.getElementById('verdict');
+  const drift12 = (D.regions[0].value + 12*PLAN.amount*PLAN.usPct) / (BASE + 12*PLAN.amount);
+  if (Math.abs(S.target - CUR_US) < 0.003){
+    v.className = 'verdict flat';
+    v.innerHTML = `Sei al punto di partenza. Nota però che <b>non fare nulla non è neutro</b>: il piano di accumulo versa su un ETF al ${PCT(PLAN.usPct,1)} USA, quindi fra 12 mesi ti troveresti al <b>${PCT(drift12,1)}</b> senza aver deciso niente.`;
+  } else if (R.up){
+    v.className = 'verdict warn';
+    v.innerHTML = `Stai <b>aumentando</b> l'esposizione USA. Servono ${EUR(R.traded)} spostati da posizioni non americane verso l'S&amp;P 500${R.months!==null?`, più ${R.months.toLocaleString('it-IT',{maximumFractionDigits:1})} mesi di accumulo`:''}. Il portafoglio si concentra: valuta se è quello che vuoi.`;
+  } else if (S.mode === 'plan'){
+    if (R.months === null){ v.className='verdict warn';
+      v.innerHTML = `Con il solo piano di accumulo non arrivi a questo target: servirebbero versamenti oltre l'orizzonte utile. Passa a <b>Misto</b> o <b>Vendi e ricompra</b>.`;
+    } else { v.className = 'verdict';
+      v.innerHTML = `Zero vendite, zero tasse, zero commissioni. Redirigi i <b>${EUR(PLAN.amount)}/mese</b> dal core attuale a <b>${R.dest.label}</b> e arrivi al ${PCT(S.target,1)} in <b>${R.months.toLocaleString('it-IT',{maximumFractionDigits:1})} mesi</b> (${EUR(R.months*PLAN.amount)} versati). È la strada più lenta e la più economica.`; }
+  } else if (S.mode === 'mix'){
+    v.className = 'verdict';
+    v.innerHTML = `Vendi solo le posizioni quasi-pure USA (${EUR(R.traded)}), quelle che non aggiungono diversificazione al core${R.months!==null?`, poi lasci lavorare l'accumulo per <b>${R.months.toLocaleString('it-IT',{maximumFractionDigits:1})} mesi</b>`:''}. Compromesso ragionevole fra velocità e costo fiscale.`;
+  } else {
+    v.className = 'verdict warn';
+    v.innerHTML = `Arrivi al target subito, ma movimenti <b>${EUR(R.traded)}</b> (${PCT(R.traded/BASE,1)} del portafoglio azionario) e realizzi le plusvalenze su tutto. Se il piano di accumulo resta sul core attuale, fra 12 mesi sarai già risalito verso il ${PCT((R.usAfterTrades + 12*PLAN.amount*PLAN.usPct)/(BASE+12*PLAN.amount),1)}.`;
+  }
+
+  /* bars */
+  const totAfter = Object.values(R.after).reduce((a,b)=>a+b,0);
+  document.getElementById('bars-cap').innerHTML = 'Barra piena = dopo. Tacca verticale = posizione di oggi.'
+    + (R.inflow > 0 ? ` Composizione nel momento in cui il target è raggiunto, su una base cresciuta a ${EUR(R.finalBase)} per i versamenti.` : '');
+  const max = Math.max(...D.regions.map(r=>r.weight), ...Object.values(R.after).map(x=>x/totAfter));
+  document.getElementById('bars-after').innerHTML = D.regions.filter(r=>r.key!=='uncategorized').map(r=>{
+    const nw = (R.after[r.key]||0)/totAfter, ow = r.weight;
+    const d = nw - ow;
+    return `<div class="bar-row">
+      <span class="lbl">${r.label}</span>
+      <div class="track">
+        <div class="fill" style="width:${Math.min(100,nw/max*100)}%; background:${regColor(r.key)}"></div>
+        <div class="tick" style="left:${Math.min(100,ow/max*100)}%"></div>
+      </div>
+      <span class="pct">${PCT(nw,1)}</span>
+      <span class="eur ${Math.abs(d)<0.0005?'':(d>0?'under':'over')}">${Math.abs(d)<0.0005?'—':SGN(d,1)}</span>
+    </div>`;}).join('');
+
+  /* actions table */
+  const tb = document.getElementById('tb-actions');
+  const lede = document.getElementById('actions-lede');
+  const rows = [];
+  R.acts.forEach(a=>rows.push(`<tr>
+    <td><span class="pill sell">VENDI</span></td>
+    <td>${a.name}<br><span class="isin">${a.isin}</span></td>
+    <td class="n">${PCT(a.usPct,1)}</td>
+    <td class="n">${EUR2(a.amt)}</td>
+    <td class="n ${a.eff>=0?'over':'under'}">${a.eff>=0?'+':'−'}${EUR2(Math.abs(a.eff))}</td></tr>`));
+  if (R.traded > 1) rows.push(`<tr>
+    <td><span class="pill buy">COMPRA</span></td>
+    <td>${R.dest.label}<br><span class="isin">${R.dest.isin}</span></td>
+    <td class="n">${PCT(R.dest.usPct,1)}</td>
+    <td class="n">${EUR2(R.traded)}</td>
+    <td class="n ${R.dest.usPct>0.5?'over':''}">${R.dest.usPct>0.5?'+'+EUR2(R.traded*R.dest.usPct):'—'}</td></tr>`);
+  if (R.months !== null) rows.push(`<tr>
+    <td><span class="pill buy">PIANO</span></td>
+    <td>Sposta il piano di accumulo su ${R.dest.label}<br><span class="isin">${EUR(PLAN.amount)}/mese · oggi su ${PLAN.name}</span></td>
+    <td class="n">${PCT(R.dest.usPct,1)}</td>
+    <td class="n">${EUR(PLAN.amount)}/mese</td>
+    <td class="n">${R.months.toLocaleString('it-IT',{maximumFractionDigits:1})} mesi</td></tr>`);
+
+  if (!rows.length){
+    tb.innerHTML = `<tr><td colspan="5" class="muted">Nessuna operazione: il target coincide con la situazione attuale.</td></tr>`;
+    lede.textContent = 'Sposta lo slider per generare un piano di operazioni.';
+  } else {
+    tb.innerHTML = rows.join('');
+    lede.textContent = S.mode==='plan'
+      ? 'Una sola modifica, nessun ordine di borsa: cambi la destinazione del versamento mensile.'
+      : `${R.acts.length} vendite e 1 acquisto${R.months!==null?', più la modifica al piano di accumulo':''}. Gli importi sono al lordo di imposte e commissioni.`;
+  }
+}
+
+/* ---------- controls ---------- */
+function renderDestChips(){
+  const up = S.target > CUR_US;
+  document.getElementById('dest-block').hidden = false;
+  const box = document.getElementById('dest-chips');
+  if (up){
+    box.innerHTML = `<button class="chip" type="button" aria-pressed="true" disabled>Vanguard S&amp;P 500 (Acc)</button>`;
+    document.getElementById('dest-note').textContent =
+      'Stai aumentando gli USA: la destinazione è la posizione S&P 500 che hai già, per non aprire strumenti nuovi.';
+  } else {
+    box.innerHTML = D.destinations.map(d=>
+      `<button class="chip" type="button" data-dest="${d.id}" aria-pressed="${d.id===S.dest}">${d.label}</button>`).join('');
+    box.querySelectorAll('[data-dest]').forEach(b=>b.addEventListener('click',()=>{
+      S.dest = b.dataset.dest; render(); }));
+    document.getElementById('dest-note').textContent = D.destinations.find(d=>d.id===S.dest).note;
+  }
+}
+function render(){
+  document.getElementById('order-block').hidden = (S.mode !== 'sell' || S.target > CUR_US);
+  const notes = {
+    plan:'Non vendi nulla. Cambi solo dove versi i 1.000 € mensili. Lento, ma senza imposte né commissioni.',
+    mix:'Vendi solo le posizioni quasi interamente USA (S&P 500 e Nasdaq Biotech), il resto lo fa il piano di accumulo.',
+    sell:'Raggiungi il target subito vendendo e ricomprando. Massima velocità, massimo costo fiscale.'};
+  document.getElementById('mode-note').textContent = notes[S.mode];
+  document.getElementById('order-note').textContent = S.order==='sat'
+    ? 'Tocca prima i satelliti tematici e le posizioni S&P 500 separate, lascia il core e le azioni singole per ultimi.'
+    : 'Vende in ordine di densità USA, azioni singole comprese: meno euro movimentati, ma smonta anche Micron, PayPal e SpaceX.';
+  renderDestChips();
+  renderSim();
+}
+
+/* ---------- init ---------- */
+document.getElementById('asof').textContent = new Date(D.asOf).toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+document.getElementById('asof2').textContent = new Date(D.asOf).toLocaleString('it-IT');
+document.getElementById('qasof').textContent = D.quotesAsOf;
+document.getElementById('pf-id').textContent = D.portfolioId;
+document.getElementById('k-us').textContent = PCT(CUR_US,1);
+document.getElementById('k-dev').textContent = SGN(CUR_US-0.50,1);
+document.getElementById('k-dev').style.color = 'var(--us)';
+document.getElementById('k-dev-sub').textContent = EUR(D.regions[0].value - 0.50*BASE) + ' oltre il target';
+document.getElementById('k-base').textContent = EUR(BASE);
+document.getElementById('k-tot').textContent = EUR(D.totalPortfolio);
+document.getElementById('k-tot-sub').textContent = 'incl. ' + EUR2(D.gold) + ' in oro, liquidità 0 €';
+
+renderCurrent(); renderOrigin();
+
+document.getElementById('slider').addEventListener('input', e=>{ S.target = +e.target.value/100; render(); });
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+  S.target = +b.dataset.preset/100; document.getElementById('slider').value = b.dataset.preset; render(); }));
+document.querySelectorAll('#mode-chips [data-mode]').forEach(b=>b.addEventListener('click',()=>{
+  S.mode = b.dataset.mode;
+  document.querySelectorAll('#mode-chips [data-mode]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  render(); }));
+document.querySelectorAll('#order-chips [data-order]').forEach(b=>b.addEventListener('click',()=>{
+  S.order = b.dataset.order;
+  document.querySelectorAll('#order-chips [data-order]').forEach(x=>x.setAttribute('aria-pressed', x===b));
+  render(); }));
+
+const root = document.documentElement, tb = document.getElementById('themeBtn');
+tb.addEventListener('click', ()=>{
+  const dark = root.getAttribute('data-theme')==='dark'
+    || (!root.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+  root.setAttribute('data-theme', dark ? 'light' : 'dark');
+});
+
+render();
+</script>
