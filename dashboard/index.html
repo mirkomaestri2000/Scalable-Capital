@@ -1,0 +1,986 @@
+<title>Rotta 100% Azionaria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2F3F1; --surface:#FCFCFB; --surface-2:#F6F7F4; --line:#DCDED8; --line-strong:#C3C6BD;
+  --ink:#171A16; --ink-2:#4A4F47; --ink-3:#767C72;
+  --accent:#0A5F55; --accent-soft:#DCEBE7;
+  --pos:#3F6E2A; --neg:#A6401C; --warn:#8A6A0B;
+  --c1:#0A8C7E; --c2:#C2521A; --c3:#4059A0; --c4:#A88410; --c5:#8A3580; --c6:#4E7A2E;
+  --grid:#E3E5DF;
+  --shadow:0 1px 2px rgba(20,25,18,.05), 0 6px 18px -12px rgba(20,25,18,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+    --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#828879;
+    --accent:#3FB3A2; --accent-soft:#17302C;
+    --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227;
+    --c1:#1F9787; --c2:#D2652E; --c3:#6684CC; --c4:#AF8C18; --c5:#AC64A2; --c6:#65A040;
+    --grid:#2A2E28;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+  --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#828879;
+  --accent:#3FB3A2; --accent-soft:#17302C;
+  --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227;
+  --c1:#1F9787; --c2:#D2652E; --c3:#6684CC; --c4:#AF8C18; --c5:#AC64A2; --c6:#65A040;
+  --grid:#2A2E28;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px 96px}
+h1,h2,h3,h4{font-family:Archivo,"IBM Plex Sans",system-ui,sans-serif; text-wrap:balance; margin:0}
+h1{font-size:clamp(28px,4.2vw,44px); font-weight:700; letter-spacing:-.025em; line-height:1.06}
+h2{font-size:22px; font-weight:600; letter-spacing:-.014em}
+h3{font-size:16px; font-weight:600; letter-spacing:-.008em}
+p{margin:0}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums}
+.num{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);
+}
+.muted{color:var(--ink-2)}
+.small{font-size:13px; line-height:1.5}
+.xs{font-size:12px; line-height:1.45}
+
+/* ---------- masthead ---------- */
+header.top{
+  border-bottom:1px solid var(--line);
+  padding:34px 0 26px; margin-bottom:34px;
+}
+.top-row{display:flex; flex-wrap:wrap; gap:20px 32px; align-items:flex-end; justify-content:space-between}
+.stamp{
+  display:inline-flex; align-items:center; gap:8px; padding:5px 11px;
+  border:1px solid var(--line-strong); border-radius:999px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; color:var(--ink-2);
+}
+.stamp b{color:var(--accent); font-weight:600}
+.theme-btn{
+  font:inherit; font-size:12px; cursor:pointer; color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:6px 12px;
+}
+.theme-btn:hover{border-color:var(--line-strong); color:var(--ink)}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:1px; background:var(--line);
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-bottom:12px}
+.kpi{background:var(--surface); padding:16px 18px 15px; display:flex; flex-direction:column; gap:5px}
+.kpi .v{font-family:Archivo,sans-serif; font-weight:600; font-size:25px; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:11.5px; color:var(--ink-3); line-height:1.35}
+.kpi.hero{background:var(--accent-soft)}
+.kpi.hero .v{color:var(--accent); font-size:29px}
+
+/* ---------- sections ---------- */
+section{margin-top:52px; scroll-margin-top:16px}
+.sec-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 16px; margin-bottom:6px}
+.sec-head .n{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3)}
+.lede{color:var(--ink-2); font-size:14.5px; max-width:66ch; margin-top:8px}
+
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow)}
+.panel-pad{padding:20px 22px}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:18px}
+.grid3{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:18px}
+.stack{display:flex; flex-direction:column; gap:18px}
+.row{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+
+/* ---------- bars ---------- */
+.bars{display:flex; flex-direction:column; gap:9px}
+.bar-row{display:grid; grid-template-columns:minmax(96px,var(--lblw,150px)) 1fr auto; gap:12px; align-items:center}
+.bar-row .lbl{font-size:13px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.track{height:14px; background:var(--surface-2); border-radius:4px; position:relative; overflow:hidden;
+  border:1px solid var(--line)}
+.fill{height:100%; border-radius:0 4px 4px 0; transition:width .5s cubic-bezier(.22,1,.36,1)}
+.bar-row .val{font-family:"IBM Plex Mono",monospace; font-size:12.5px; font-variant-numeric:tabular-nums; color:var(--ink); min-width:56px; text-align:right}
+
+/* stacked strip */
+.strip{display:flex; height:34px; border-radius:8px; overflow:hidden; gap:2px; background:var(--surface)}
+.strip > div{position:relative; display:flex; align-items:center; justify-content:center; min-width:2px}
+.strip .tag{font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.35)}
+
+.legend{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:12px}
+.legend span{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-2)}
+.dot{width:10px; height:10px; border-radius:3px; flex:none}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow)}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:600px}
+th,td{padding:10px 14px; text-align:left; border-bottom:1px solid var(--line)}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:500; background:var(--surface-2); position:sticky; top:0; white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:var(--surface-2)}
+td.n,th.n{text-align:right; font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap}
+tfoot td{font-weight:600; background:var(--surface-2); border-top:1px solid var(--line-strong)}
+.minibar{display:block; height:7px; border-radius:2px; background:var(--c1); min-width:2px}
+.isin{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3); display:block; margin-top:2px}
+
+/* ---------- pills ---------- */
+.pill{display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:5px;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500; white-space:nowrap; border:1px solid transparent}
+.pill.core{color:var(--accent); background:var(--accent-soft); border-color:color-mix(in srgb,var(--accent) 30%,transparent)}
+.pill.keep{color:var(--pos); background:color-mix(in srgb,var(--pos) 12%,transparent); border-color:color-mix(in srgb,var(--pos) 32%,transparent)}
+.pill.hold{color:var(--warn); background:color-mix(in srgb,var(--warn) 14%,transparent); border-color:color-mix(in srgb,var(--warn) 34%,transparent)}
+.pill.off{color:var(--neg); background:color-mix(in srgb,var(--neg) 12%,transparent); border-color:color-mix(in srgb,var(--neg) 32%,transparent)}
+.pill.flat{color:var(--ink-2); background:var(--surface-2); border-color:var(--line)}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex; flex-wrap:wrap; gap:4px; padding:4px; background:var(--surface-2); border:1px solid var(--line);
+  border-radius:10px; width:fit-content; margin-bottom:18px}
+.tab{font:inherit; font-size:13px; cursor:pointer; padding:6px 13px; border-radius:7px; border:1px solid transparent;
+  background:transparent; color:var(--ink-2)}
+.tab[aria-selected="true"]{background:var(--surface); color:var(--ink); border-color:var(--line-strong); font-weight:600}
+.tab:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px}
+
+/* ---------- deviation chart ---------- */
+.dev-row{display:grid; grid-template-columns:minmax(120px,210px) 1fr minmax(74px,auto); gap:14px; align-items:center; padding:9px 0}
+.dev-track{position:relative; height:26px}
+.dev-axis{position:absolute; left:50%; top:-4px; bottom:-4px; width:1px; background:var(--line-strong)}
+.dev-bar{position:absolute; top:5px; height:16px; border-radius:3px}
+.dev-val{font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; text-align:right}
+
+/* ---------- callouts ---------- */
+.note{border-left:3px solid var(--line-strong); padding:2px 0 2px 15px; color:var(--ink-2); font-size:13.5px}
+.note.warn{border-color:var(--warn)}
+.note.stop{border-color:var(--neg)}
+.banner{
+  display:flex; gap:14px; align-items:flex-start; padding:16px 18px; border-radius:12px;
+  background:var(--surface); border:1px solid var(--line-strong); border-left:4px solid var(--neg); box-shadow:var(--shadow);
+}
+.banner .ico{font-family:"IBM Plex Mono",monospace; font-weight:600; color:var(--neg); font-size:13px; letter-spacing:.08em; flex:none; padding-top:1px}
+
+ul.clean{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px; color:var(--ink-2); font-size:13.5px}
+ul.clean strong{color:var(--ink); font-weight:600}
+ul.clean li::marker{color:var(--ink-3)}
+
+/* ---------- simulator ---------- */
+.sim{display:grid; grid-template-columns:minmax(260px,1fr) minmax(240px,340px); gap:26px; align-items:start}
+input[type=range]{width:100%; accent-color:var(--accent); height:22px}
+.sim-out{display:flex; flex-direction:column; gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+.sim-out div{background:var(--surface-2); padding:11px 14px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:13px}
+.sim-out b{font-family:"IBM Plex Mono",monospace; font-size:15px; font-weight:600; color:var(--ink)}
+@media(max-width:720px){.sim{grid-template-columns:1fr}}
+
+footer{margin-top:64px; padding-top:24px; border-top:1px solid var(--line); color:var(--ink-3); font-size:12.5px; line-height:1.6}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="top-row">
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:60ch">
+      <span class="eyebrow">Scalable Capital · Portafoglio ix6z…C7j5Z · Mirko Maestri</span>
+      <h1>Rotta 100&nbsp;% Azionaria</h1>
+      <p class="muted" style="font-size:15px">
+        Fotografia del portafoglio, dei piani di accumulo e dello scostamento dall'allocazione
+        obiettivo. Vincolo di mandato: <b style="color:var(--ink)">azionario globale, nessuna
+        obbligazione, nessuna materia prima, nessuna liquidità strutturale.</b>
+      </p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+      <span class="stamp">Valorizzazione <b>7 set 2026, 15:36 CEST</b></span>
+      <button class="theme-btn" id="themeBtn" type="button">Tema: auto</button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ KPI ============ -->
+<div class="kpis">
+  <div class="kpi hero">
+    <span class="eyebrow">Valore totale</span>
+    <span class="v">€&thinsp;39.062,52</span>
+    <span class="sub">22 posizioni · tutto in EUR di conto</span>
+  </div>
+  <div class="kpi">
+    <span class="eyebrow">Liquidità</span>
+    <span class="v">€&thinsp;0,00</span>
+    <span class="sub">Buying power €0 · nessuna linea di credito</span>
+  </div>
+  <div class="kpi">
+    <span class="eyebrow">Quota azionaria</span>
+    <span class="v">99,25&thinsp;%</span>
+    <span class="sub">0,75&thinsp;% oro fisico (ETC), unica voce non azionaria</span>
+  </div>
+  <div class="kpi">
+    <span class="eyebrow">PAC mensile</span>
+    <span class="v">€&thinsp;1.000</span>
+    <span class="sub">1 piano attivo · prossima esecuzione 10 set 2026</span>
+  </div>
+  <div class="kpi">
+    <span class="eyebrow">P/L dall'inizio</span>
+    <span class="v" style="color:var(--pos)">+€&thinsp;6.026</span>
+    <span class="sub">Rendimento assoluto semplice, periodo MAX</span>
+  </div>
+</div>
+<p class="xs" style="color:var(--ink-3)">
+  Fonte: API Scalable Capital, snapshot del 7 settembre 2026 (inventario aggiornato alle 03:38 UTC,
+  prezzi alle 13:36 UTC). Tutti i valori sono ricalcolati da quantità × prezzo mid.
+</p>
+
+<!-- ============ 1. ANDAMENTO ============ -->
+<section id="andamento">
+  <div class="sec-head"><span class="n">01</span><h2>Andamento e flussi</h2></div>
+  <p class="lede">
+    Scalable espone il rendimento <em>assoluto</em> per orizzonte, non una serie storica del valore.
+    Il grafico qui sotto è quindi un profilo di P/L per finestra temporale, non una curva di equity:
+    le finestre si sovrappongono e non sono sommabili.
+  </p>
+
+  <div class="grid2" style="margin-top:20px">
+    <div class="panel panel-pad">
+      <h3>Rendimento assoluto per orizzonte</h3>
+      <p class="xs muted" style="margin-top:4px">Guadagno o perdita in euro sul periodo indicato</p>
+      <div class="bars" style="--lblw:104px; margin-top:16px" id="perfBars"></div>
+      <p class="xs" style="color:var(--ink-3); margin-top:14px">
+        Il P/L a 1 anno (+€5.343) e quello dall'inizio (+€6.026) sono vicini: la quasi totalità del
+        risultato è stata prodotta negli ultimi dodici mesi, e oltre due terzi negli ultimi sei.
+      </p>
+    </div>
+
+    <div class="panel panel-pad">
+      <h3>Versamenti netti per mese</h3>
+      <p class="xs muted" style="margin-top:4px">Ricostruiti dal registro movimenti · dato parziale</p>
+      <div class="bars" style="--lblw:80px; margin-top:16px" id="flowBars"></div>
+      <p class="xs" style="color:var(--ink-3); margin-top:14px">
+        €16.738 netti versati da novembre 2025, contro €1.000/mese di PAC: circa il 40&thinsp;% degli
+        apporti arriva da acquisti manuali fuori piano. È la causa diretta della frammentazione
+        vista al punto 04.
+      </p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:18px">
+    <b>Limite del dato.</b> Il registro movimenti restituisce le ultime 100 operazioni, che risalgono
+    al 3 novembre 2025. I versamenti precedenti a quella data non compaiono, quindi la serie dei
+    flussi non copre l'intera vita del conto e non permette di calcolare un TWR o un IRR affidabile.
+  </p>
+</section>
+
+<!-- ============ 2. POSIZIONI ============ -->
+<section id="posizioni">
+  <div class="sec-head"><span class="n">02</span><h2>Posizioni</h2></div>
+  <p class="lede">
+    22 strumenti. Il fondo core copre il 77&thinsp;% da solo; le nove posizioni più piccole,
+    sommate, valgono meno dell'1,7&thinsp;% del portafoglio e non spostano il rischio complessivo.
+  </p>
+  <div class="tbl-wrap" style="margin-top:18px">
+    <table id="posTable">
+      <thead><tr>
+        <th>Strumento</th><th>Ruolo</th><th class="n">Quantità</th><th class="n">Prezzo</th>
+        <th class="n">Valore</th><th class="n">Peso</th><th style="width:120px"></th>
+      </tr></thead>
+      <tbody></tbody>
+      <tfoot><tr>
+        <td colspan="4">Totale</td><td class="n">39.062,52</td><td class="n">100,00 %</td><td></td>
+      </tr></tfoot>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 3. RIPARTIZIONI ============ -->
+<section id="ripartizioni">
+  <div class="sec-head"><span class="n">03</span><h2>Esposizione in trasparenza</h2></div>
+  <p class="lede">
+    Dati di look-through Scalable, calcolati sui titoli sottostanti dei fondi e non sui nomi
+    dei fondi stessi. Copertura del 99,98&thinsp;% del portafoglio.
+  </p>
+
+  <div class="tabs" role="tablist" style="margin-top:20px">
+    <button class="tab" role="tab" aria-selected="true" data-tab="geo">Aree geografiche</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="dmem">Sviluppato / Emergente</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="sec">Settori</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="cap">Capitalizzazione</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="fx">Valuta</button>
+  </div>
+
+  <div class="panel panel-pad" id="tabGeo">
+    <h3>Peso per area geografica</h3>
+    <p class="xs muted" style="margin-top:4px">Classificazione regionale Morningstar</p>
+    <div class="bars" style="--lblw:172px; margin-top:16px" id="geoBars"></div>
+  </div>
+
+  <div class="panel panel-pad" id="tabDmem" hidden>
+    <h3>Mercati sviluppati ed emergenti</h3>
+    <div class="strip" style="margin-top:16px" id="dmemStrip"></div>
+    <div class="legend" id="dmemLegend"></div>
+    <div class="note warn" style="margin-top:20px">
+      <b>Attenzione a questa etichetta.</b> Morningstar classifica Corea e Taiwan come
+      <em>Asia sviluppata</em>, mentre MSCI — l'indice che i tuoi ETF replicano — li considera
+      <em>emergenti</em>. Il 9,6&thinsp;% "emerging" qui sopra sottostima quindi l'esposizione reale.
+    </div>
+    <div style="margin-top:20px">
+      <h3>Stima con la definizione MSCI</h3>
+      <p class="xs muted" style="margin-top:4px">Ricostruzione dal basso, fondo per fondo</p>
+      <div class="bars" style="--lblw:230px; margin-top:14px" id="emBars"></div>
+      <p class="xs" style="color:var(--ink-3); margin-top:12px">
+        Assunzione: il fondo core MSCI ACWI contiene circa il 10,5&thinsp;% di paesi emergenti
+        (peso indice tipico; Scalable non espone la composizione del singolo fondo via API).
+        Con questa assunzione l'esposizione emergente reale è circa <b style="color:var(--ink)">16,5&thinsp;%</b>,
+        contro il ~10,5&thinsp;% di un ACWI puro: un sovrappeso di circa 1,6 volte.
+      </p>
+    </div>
+  </div>
+
+  <div class="panel panel-pad" id="tabSec" hidden>
+    <h3>Peso per settore</h3>
+    <p class="xs muted" style="margin-top:4px">Sottostanti azionari, classificazione Morningstar</p>
+    <div class="bars" style="--lblw:172px; margin-top:16px" id="secBars"></div>
+    <p class="xs" style="color:var(--ink-3); margin-top:14px">
+      Tecnologia al 32,4&thinsp;%: qualche punto sopra il peso naturale di un indice mondiale
+      (~26–28&thinsp;%). Il differenziale arriva dai satelliti tematici — AI &amp; Big Data,
+      Automation &amp; Robotics — e da Micron.
+    </p>
+  </div>
+
+  <div class="panel panel-pad" id="tabCap" hidden>
+    <h3>Peso per capitalizzazione</h3>
+    <div class="strip" style="margin-top:16px" id="capStrip"></div>
+    <div class="legend" id="capLegend"></div>
+    <p class="xs" style="color:var(--ink-3); margin-top:16px">
+      Le small cap pesano <b style="color:var(--ink)">0,70&thinsp;%</b>, e sono quasi tutte residui
+      involontari dentro i fondi tematici. Un indice MSCI ACWI copre circa l'85&thinsp;% della
+      capitalizzazione mondiale investibile: le small cap sono l'unico blocco azionario davvero
+      assente dal portafoglio. È l'unica lacuna strutturale che ho trovato.
+    </p>
+  </div>
+
+  <div class="panel panel-pad" id="tabFx" hidden>
+    <h3>Esposizione valutaria — stima</h3>
+    <p class="xs muted" style="margin-top:4px">Derivata dai pesi regionali, non è un dato Scalable</p>
+    <div class="bars" style="--lblw:132px; margin-top:16px" id="fxBars"></div>
+    <div class="note stop" style="margin-top:20px">
+      <b>Dato mancante.</b> L'API Scalable non espone una ripartizione valutaria. Questa stima
+      associa a ogni regione la sua valuta dominante (Eurozona → EUR, Stati Uniti → USD, Giappone →
+      JPY, e così via) e assegna il blocco emergente a un paniere di valute locali. È un'approssimazione:
+      ignora le multinazionali con ricavi in valuta diversa da quella di quotazione, e la copertura
+      valutaria dell'unica posizione hedged in portafoglio (€48,71, ininfluente). Trattala come
+      ordine di grandezza, non come misura.
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. PAC ============ -->
+<section id="pac">
+  <div class="sec-head"><span class="n">04</span><h2>Piani di accumulo attivi</h2></div>
+  <div class="tbl-wrap" style="margin-top:18px">
+    <table>
+      <thead><tr>
+        <th>Strumento</th><th class="n">Importo</th><th>Frequenza</th><th>Giorno</th>
+        <th>Prossima esecuzione</th><th class="n">Dinamizzazione</th><th>Addebito</th>
+      </tr></thead>
+      <tbody><tr>
+        <td>Scalable MSCI AC World Xtrackers (Acc)<span class="isin">LU2903252349</span></td>
+        <td class="n">€ 1.000,00</td><td>Mensile</td><td class="n">10</td>
+        <td class="mono">10 set 2026</td><td class="n">0 %</td><td>Conto di riferimento</td>
+      </tr></tbody>
+      <tfoot><tr><td>Totale piani</td><td class="n">€ 1.000,00</td><td colspan="5"></td></tr></tfoot>
+    </table>
+  </div>
+  <div class="grid2" style="margin-top:18px">
+    <p class="note">
+      <b>Il PAC sta già facendo la cosa giusta.</b> Il 100&thinsp;% del versamento ricorrente va in un
+      unico fondo azionario globale ACWI, accumulazione, senza dinamizzazione. È la struttura corretta
+      per un orizzonte lungo: non c'è nulla da riparare nell'impianto, solo da regolare la ripartizione.
+    </p>
+    <p class="note warn">
+      <b>PAC chiuso di recente.</b> Fino a luglio 2026 era attivo anche un piano su Micron Technology
+      (€150–200/mese, ultima esecuzione l'1 luglio 2026). Non risulta più tra i piani attivi. Se l'hai
+      chiuso, bene: un PAC su un singolo titolo semiconduttori è la cosa più lontana da un portafoglio
+      diversificato. Se si è interrotto per un rifiuto di addebito, meglio verificarlo.
+    </p>
+  </div>
+</section>
+
+<!-- ============ 5. TARGET ============ -->
+<section id="target">
+  <div class="sec-head"><span class="n">05</span><h2>Allocazione obiettivo proposta</h2></div>
+  <p class="lede">
+    Tre righe, tutte azionarie. Il criterio è: coprire il mercato azionario mondiale investibile nel
+    modo più completo possibile con il minor numero di strumenti, e non pagare per esposizioni che il
+    fondo core già contiene.
+  </p>
+
+  <div class="tbl-wrap" style="margin-top:20px">
+    <table>
+      <thead><tr>
+        <th style="width:26%">ETF</th><th class="n">Peso obiettivo</th><th>Ruolo</th>
+        <th>Esposizione sottostante</th><th>Perché</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Scalable MSCI AC World Xtrackers (Acc)</b><span class="isin">LU2903252349 · già in portafoglio</span></td>
+          <td class="n" style="font-size:16px;font-weight:600">85 %</td>
+          <td><span class="pill core">Motore</span></td>
+          <td class="small">~2.300 titoli large e mid cap, 23 paesi sviluppati + 24 emergenti, ponderati per capitalizzazione</td>
+          <td class="small">È già il tuo PAC e già il 77&thinsp;% del patrimonio. Un solo fondo che ribilancia
+            da sé fra paesi e settori, senza che tu debba decidere nulla: è la parte del portafoglio che
+            non richiede manutenzione.</td>
+        </tr>
+        <tr>
+          <td><b>iShares MSCI World Small Cap (Acc)</b><span class="isin">IE00BF4RFH31 · da acquistare</span></td>
+          <td class="n" style="font-size:16px;font-weight:600">10 %</td>
+          <td><span class="pill keep">Completamento</span></td>
+          <td class="small">~3.300 small cap dei mercati sviluppati, il segmento che l'indice ACWI esclude per costruzione</td>
+          <td class="small">Colma l'unico vuoto reale: oggi le small cap pesano lo 0,70&thinsp;%.
+            Non è una scommessa sul premio dimensionale — è completare la copertura del mercato.
+            <b>Trade-off onesto:</b> costa più del core e il premio small cap non si vede da anni.</td>
+        </tr>
+        <tr>
+          <td><b>Xtrackers MSCI Emerging Markets (Acc)</b><span class="isin">IE00BTJRMP35 · già in portafoglio</span></td>
+          <td class="n" style="font-size:16px;font-weight:600">5 %</td>
+          <td><span class="pill keep">Inclinazione</span></td>
+          <td class="small">Large e mid cap di 24 paesi emergenti, Cina, Taiwan, India e Corea in testa</td>
+          <td class="small">Porta i paesi emergenti da ~9&thinsp;% (nativo del core) a ~14&thinsp;%, più vicino
+            al loro peso nel PIL mondiale che a quello di borsa. È già il tuo secondo fondo per dimensione:
+            si tiene, non si compra altro.</td>
+        </tr>
+        <tr style="opacity:.85">
+          <td><b>Tutto il resto</b><span class="isin">19 strumenti</span></td>
+          <td class="n" style="font-size:16px;font-weight:600">0 %</td>
+          <td><span class="pill off">In esaurimento</span></td>
+          <td class="small">S&amp;P 500 (×3), MSCI World, Momentum, 4 tematici, India, Malesia, Frontier, oro, 5 azioni singole</td>
+          <td class="small">Nessuna vendita proposta. Semplicemente non ricevono più denaro: il loro peso
+            scende da solo man mano che il portafoglio cresce.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid2" style="margin-top:18px">
+    <p class="note">
+      <b>Alternativa più semplice, che va bene quasi uguale.</b> 100&thinsp;% sul fondo core, punto.
+      Rinunci a small cap e all'inclinazione emergente, guadagni uno strumento solo da guardare e il
+      TER più basso del portafoglio. Se la manutenzione ti pesa più della completezza, scegli questa:
+      la differenza attesa fra le due è di frazioni di punto l'anno, molto dentro il rumore.
+    </p>
+    <p class="note">
+      <b>Cosa non ho proposto e perché.</b> Nessun fattoriale (value, quality, momentum): moltiplicano
+      le decisioni e vanno tenuti per decenni per avere senso. Nessun tematico: sono scommesse settoriali
+      travestite da diversificazione, e ne hai già quattro. Nessun ETF su Europa o Giappone separati:
+      il core li contiene già ai loro pesi di mercato.
+    </p>
+  </div>
+</section>
+
+<!-- ============ 6. SCOSTAMENTI ============ -->
+<section id="scostamenti">
+  <div class="sec-head"><span class="n">06</span><h2>Scostamenti e priorità</h2></div>
+  <p class="lede">
+    Differenza in punti percentuali fra allocazione attuale e obiettivo. La soglia di intervento
+    proposta è <b style="color:var(--ink)">±5 punti percentuali</b> su ogni riga, verificata due volte
+    l'anno: sotto quella banda non si tocca niente.
+  </p>
+
+  <div class="panel panel-pad" style="margin-top:20px">
+    <div id="devChart"></div>
+    <div class="legend" style="border-top:1px solid var(--line); padding-top:14px; margin-top:6px">
+      <span><span class="dot" style="background:var(--accent)"></span>Sotto obiettivo — destinatario dei nuovi versamenti</span>
+      <span><span class="dot" style="background:var(--warn)"></span>Sopra obiettivo — si diluisce da solo, nessun nuovo versamento</span>
+    </div>
+  </div>
+
+  <div class="grid3" style="margin-top:18px">
+    <div class="panel panel-pad">
+      <span class="eyebrow">Priorità 1</span>
+      <h3 style="margin-top:8px">Small cap: −10,0 pp</h3>
+      <p class="small muted" style="margin-top:8px">Lo scostamento più ampio e l'unico che corrisponde
+      a un'esposizione realmente assente. Si copre solo con nuovi versamenti: servono circa €3.900
+      ai valori odierni.</p>
+    </div>
+    <div class="panel panel-pad">
+      <span class="eyebrow">Priorità 2</span>
+      <h3 style="margin-top:8px">Coda satelliti: +14,6 pp</h3>
+      <p class="small muted" style="margin-top:8px">Numericamente il più grande, ma si chiude da solo
+      senza vendere: basta smettere di alimentarlo. Con €1.000/mese scende sotto il 10&thinsp;% in
+      circa due anni e sotto il 6&thinsp;% in cinque.</p>
+    </div>
+    <div class="panel panel-pad">
+      <span class="eyebrow">Priorità 3</span>
+      <h3 style="margin-top:8px">Emergenti: +3,4 pp</h3>
+      <p class="small muted" style="margin-top:8px">Dentro la banda di ±5 pp. <b style="color:var(--ink)">Nessun
+      intervento.</b> Va solo smesso di comprare emergenti manualmente: si è formato così, tre fondi
+      alla volta.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. SOVRAPPOSIZIONI ============ -->
+<section id="overlap">
+  <div class="sec-head"><span class="n">07</span><h2>Sovrapposizioni e ridondanze</h2></div>
+  <p class="lede">
+    Sette strumenti replicano esposizioni che il fondo core già contiene ai pesi di mercato.
+    Non fanno danno diretto, ma occupano attenzione e capitale.
+  </p>
+  <div class="tbl-wrap" style="margin-top:18px">
+    <table>
+      <thead><tr><th>Cluster</th><th class="n">Peso</th><th>Strumenti</th><th>Diagnosi</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>S&amp;P 500, tre volte</b></td><td class="n">5,87 %</td>
+          <td class="small">Vanguard S&amp;P 500 · iShares Core S&amp;P 500 · iShares S&amp;P 500 EUR Hedged</td>
+          <td class="small">Tre fondi, lo stesso indice. Il core ha già ~63&thinsp;% di Stati Uniti; questi
+            portano l'esposizione USA totale al 60,2&thinsp;% in trasparenza. Da consolidare in uno solo,
+            quando e se deciderai di vendere. La versione hedged (€48,71) è un residuo senza funzione:
+            copre il cambio su una frazione irrilevante e costa di più.</td>
+        </tr>
+        <tr>
+          <td><b>Emergenti, tre volte</b></td><td class="n">8,05 %</td>
+          <td class="small">Xtrackers MSCI EM · Amundi MSCI EM Swap · iShares Core MSCI EM IMI</td>
+          <td class="small">Stesso mercato, tre repliche diverse — di cui una a swap, con rischio di
+            controparte e trattamento fiscale da verificare. Da tenere solo Xtrackers MSCI EM,
+            il più grande dei tre.</td>
+        </tr>
+        <tr>
+          <td><b>Tematici</b></td><td class="n">1,73 %</td>
+          <td class="small">AI &amp; Big Data · Automation &amp; Robotics · Ageing Population · Nasdaq US Biotechnology</td>
+          <td class="small">Quattro scommesse settoriali che si sovrappongono pesantemente fra loro
+            (AI e Robotics condividono buona parte dei titoli) e con la tecnologia già presente nel core.
+            Complessivamente meno del 2&thinsp;%: non spostano il rendimento, spostano solo la tua attenzione.</td>
+        </tr>
+        <tr>
+          <td><b>Paesi singoli e frontiera</b></td><td class="n">0,42 %</td>
+          <td class="small">MSCI India · MSCI Malaysia · S&amp;P Select Frontier Swap</td>
+          <td class="small">€163 in totale. Malesia (€23) e Frontier (€27) sono posizioni troppo piccole
+            per avere qualsiasi effetto; sono arrivate dalla migrazione da Baader di dicembre 2025.</td>
+        </tr>
+        <tr>
+          <td><b>Azioni singole</b></td><td class="n">2,63 %</td>
+          <td class="small">Ferrari · Micron · PayPal · SpaceX · Brunello Cucinelli</td>
+          <td class="small">Rischio idiosincratico puro, senza tesi dichiarata. SpaceX in particolare è
+            uno strumento su società non quotata: verifica come è costruito e quanto è liquido prima di
+            considerarlo assimilabile a un'azione ordinaria.</td>
+        </tr>
+        <tr>
+          <td><b>Oro fisico (ETC)</b></td><td class="n">0,75 %</td>
+          <td class="small">iShares Physical Gold ETC</td>
+          <td class="small">Unica voce non azionaria: €294, comprati l'11 giugno 2026. Non ti propongo
+            di aumentarla — è fuori dal tuo mandato — ma va segnalata perché contraddice il vincolo
+            100&thinsp;% azionario che hai posto. Cosa farne è una tua decisione.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 8. PREVIEW ============ -->
+<section id="preview">
+  <div class="sec-head"><span class="n">08</span><h2>Preview della modifica ai PAC</h2></div>
+
+  <div class="banner" style="margin-top:18px">
+    <span class="ico">STOP</span>
+    <div>
+      <b>Nessuna modifica è stata eseguita.</b>
+      <p class="small muted" style="margin-top:5px">
+        Non ho creato, modificato, sospeso o cancellato alcun piano di accumulo, e non ho inviato ordini.
+        Quella che segue è una proposta da approvare. Se vuoi procedere, dimmelo esplicitamente:
+        genererò le preview ufficiali di Scalable, con i dati di sintesi contrattuali, e ti chiederò una
+        conferma separata per ciascun piano prima di inviare qualsiasi cosa.
+      </p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Modifiche proposte</h3>
+  <div class="tbl-wrap" style="margin-top:12px">
+    <table>
+      <thead><tr>
+        <th>Piano</th><th>Azione</th><th class="n">Importo attuale</th><th class="n">Importo nuovo</th>
+        <th class="n">Δ</th><th>Frequenza</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>Scalable MSCI AC World Xtrackers<span class="isin">LU2903252349</span></td>
+          <td><span class="pill hold">Ridurre</span></td>
+          <td class="n">€ 1.000</td><td class="n">€ 650</td>
+          <td class="n" style="color:var(--neg)">−350</td><td>Mensile, giorno 10</td>
+        </tr>
+        <tr>
+          <td>iShares MSCI World Small Cap<span class="isin">IE00BF4RFH31</span></td>
+          <td><span class="pill keep">Creare</span></td>
+          <td class="n">—</td><td class="n">€ 350</td>
+          <td class="n" style="color:var(--pos)">+350</td><td>Mensile, giorno 10</td>
+        </tr>
+      </tbody>
+      <tfoot><tr>
+        <td>Esborso mensile totale</td><td></td><td class="n">€ 1.000</td><td class="n">€ 1.000</td>
+        <td class="n">invariato</td><td></td>
+      </tr></tfoot>
+    </table>
+  </div>
+  <p class="xs" style="color:var(--ink-3); margin-top:10px">
+    Verificato via API: entrambi gli strumenti accettano piani da €1 a €5.000, mensili, con addebito
+    sul conto di riferimento e giorno 10 disponibile già da settembre 2026.
+  </p>
+
+  <h3 style="margin-top:32px">Effetto stimato sull'allocazione</h3>
+  <p class="small muted" style="margin-top:4px; max-width:70ch">
+    Sposta il cursore per vedere quanto tempo serve a portare le small cap al 10&thinsp;%.
+    La simulazione ignora i rendimenti futuri — assume che i prezzi restino fermi — quindi va letta
+    come ordine di grandezza dei tempi, non come previsione.
+  </p>
+  <div class="panel panel-pad" style="margin-top:16px">
+    <div class="sim">
+      <div>
+        <div class="row" style="justify-content:space-between; margin-bottom:6px">
+          <label for="slider" class="small"><b>Quota mensile su small cap</b></label>
+          <span class="num" id="sliderVal" style="font-size:17px; font-weight:600; color:var(--accent)">€ 350</span>
+        </div>
+        <input type="range" id="slider" min="0" max="600" step="25" value="350">
+        <div class="row xs" style="justify-content:space-between; color:var(--ink-3); margin-top:2px">
+          <span>€ 0</span><span>€ 600</span>
+        </div>
+        <p class="xs" style="color:var(--ink-3); margin-top:10px">
+          Il residuo, <span class="num" id="coreVal">€ 650</span>, resta sul fondo core.
+        </p>
+        <div style="margin-top:22px">
+          <span class="eyebrow">Allocazione a 12 mesi</span>
+          <div class="bars" style="--lblw:150px; margin-top:12px" id="simBars"></div>
+        </div>
+      </div>
+      <div class="sim-out" id="simOut"></div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px">Costi, rischi e compromessi</h3>
+  <div class="grid2" style="margin-top:14px">
+    <div class="panel panel-pad stack" style="gap:14px">
+      <div>
+        <span class="eyebrow">Costi</span>
+        <ul class="clean" style="margin-top:8px">
+          <li><strong>Commissioni di esecuzione:</strong> su Scalable i piani di accumulo su ETF sono
+            gratuiti nella maggior parte dei casi. <strong>Da verificare</strong> che IE00BF4RFH31 rientri
+            nel PAC gratuito del tuo piano tariffario — l'API non espone questa informazione.</li>
+          <li><strong>TER:</strong> un fondo small cap costa strutturalmente più di un ACWI (ordine di
+            grandezza: ~0,35&thinsp;% contro ~0,17&thinsp;%). Su un 10&thinsp;% del portafoglio parliamo
+            di circa €7 l'anno oggi. <strong>Verifica le cifre esatte nei KID</strong>, non nei miei numeri.</li>
+          <li><strong>Spread:</strong> le small cap hanno spread denaro-lettera più ampi del core.
+            Marginale su acquisti mensili, rilevante se un giorno dovessi liquidare in fretta.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="panel panel-pad stack" style="gap:14px">
+      <div>
+        <span class="eyebrow">Rischi e compromessi</span>
+        <ul class="clean" style="margin-top:8px">
+          <li><strong>Rallenti il core.</strong> Per 12–16 mesi il fondo principale riceve €650 invece
+            di €1.000. Se in quel periodo le small cap sottoperformano — cosa che hanno fatto per gran
+            parte dell'ultimo decennio — avrai un risultato peggiore del non fare nulla.</li>
+          <li><strong>Aggiungi uno strumento a un portafoglio che ne ha già troppi.</strong> È il
+            paradosso di questa proposta e il suo punto debole più serio: la diagnosi principale è
+            "troppa frammentazione" e il rimedio proposto aggiunge una riga. L'alternativa 100&thinsp;%
+            core al punto 05 esiste proprio per questo.</li>
+          <li><strong>Non risolve la coda.</strong> Il 14,6&thinsp;% di satelliti resta lì. Senza vendite
+            il riallineamento è lento, e i nuovi versamenti da soli non lo azzerano mai davvero.</li>
+          <li><strong>Volatilità in aumento, non in calo.</strong> Small cap ed emergenti sono i due
+            segmenti azionari più volatili. Coerente con un mandato 100&thinsp;% azionario, ma va detto:
+            questa proposta non riduce il rischio, lo diversifica soltanto.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px">Da verificare prima di procedere</h3>
+  <div class="panel panel-pad" style="margin-top:14px">
+    <ul class="clean">
+      <li><strong>Regime fiscale del conto.</strong> Verifica se Scalable Capital opera per te in regime
+        amministrato (imposta trattenuta dal broker) o dichiarativo (tocca a te dichiarare plusvalenze
+        e detenzione all'estero). Cambia completamente cosa devi fare a fine anno. È il punto più
+        importante di questa lista e non posso ricavarlo dall'API.</li>
+      <li><strong>Asimmetria fiscale italiana.</strong> Le plusvalenze su ETF armonizzati sono redditi
+        di capitale e <em>non</em> si compensano con le minusvalenze; quelle su azioni singole ed ETC
+        sono redditi diversi e si compensano. Se un giorno vendessi la coda, l'ordine e la scelta di
+        cosa vendere hanno conseguenze fiscali diverse. Da discutere con un commercialista, non con me.</li>
+      <li><strong>Nessuna vendita è prevista in questa proposta</strong>, quindi nessuna plusvalenza
+        viene realizzata e non c'è alcun impatto fiscale immediato.</li>
+      <li><strong>Replica a swap.</strong> Due strumenti in portafoglio (Amundi MSCI EM Swap, Xtrackers
+        Frontier Swap) sono sintetici. Verifica come il tuo intermediario li tratta fiscalmente e che
+        tu sia a tuo agio con il rischio di controparte.</li>
+      <li><strong>Cadenza di controllo.</strong> Due verifiche l'anno bastano. Guardare gli scostamenti
+        ogni settimana produce solo operazioni inutili — ed è, con ogni probabilità, il meccanismo che
+        ha generato le 19 posizioni satellite.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><b style="color:var(--ink-2)">Analisi informativa, non consulenza finanziaria personalizzata.</b>
+  Non tiene conto della tua situazione patrimoniale complessiva, del reddito, dell'orizzonte effettivo,
+  degli altri conti che potresti avere, né della tua tolleranza al rischio misurata. Il rendimento
+  passato non predice quello futuro.</p>
+  <p style="margin-top:10px"><b style="color:var(--ink-2)">Dati e assunzioni.</b> Fonte: API Scalable
+  Capital, 7 settembre 2026. Dati mancanti o stimati, tutti segnalati nel punto in cui compaiono:
+  ripartizione valutaria (assente, stimata dalle regioni); composizione emergente del fondo core
+  (assunta al 10,5&thinsp;%); serie storica del valore (assente, sostituita dal P/L per orizzonte);
+  movimenti anteriori al 3 novembre 2025 (fuori dalla finestra restituita dall'API); TER e commissioni
+  di PAC (non esposti dall'API, da verificare nei KID e nel listino). Peso di ogni posizione ricalcolato
+  come quantità × prezzo mid, non ripreso dai pesi Scalable.</p>
+  <p style="margin-top:10px">Nessun ordine e nessuna modifica ai piani di accumulo sono stati eseguiti.</p>
+</footer>
+
+</div>
+
+<script>
+const EUR = n => "€ " + n.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
+const EUR0 = n => "€ " + n.toLocaleString("it-IT",{maximumFractionDigits:0});
+const PC = (n,d=2) => n.toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d}) + " %";
+const el = (t,c,h) => { const e=document.createElement(t); if(c)e.className=c; if(h!==undefined)e.innerHTML=h; return e; };
+const cvar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- theme ---------- */
+const btn = document.getElementById("themeBtn");
+const modes = ["auto","light","dark"], labels={auto:"Tema: auto",light:"Tema: chiaro",dark:"Tema: scuro"};
+let mi = 0;
+btn.addEventListener("click", () => {
+  mi = (mi+1) % 3;
+  const m = modes[mi];
+  if (m === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", m);
+  btn.textContent = labels[m];
+  renderAll();
+});
+
+/* ---------- bar helper ---------- */
+function barChart(node, rows, opts={}){
+  node.innerHTML = "";
+  const max = opts.max ?? Math.max(...rows.map(r => Math.abs(r.v)));
+  rows.forEach(r => {
+    const row = el("div","bar-row");
+    row.appendChild(el("span","lbl", r.label));
+    const tr = el("div","track");
+    const f = el("div","fill");
+    f.style.background = r.color || cvar("--c1");
+    f.style.width = (Math.abs(r.v)/max*100).toFixed(2)+"%";
+    tr.appendChild(f);
+    tr.title = r.label + " — " + (r.tip ?? r.text);
+    row.appendChild(tr);
+    row.appendChild(el("span","val", r.text));
+    node.appendChild(row);
+  });
+}
+
+/* ---------- data ---------- */
+const TOTAL = 39062.52;
+
+const positions = [
+  ["Scalable MSCI AC World Xtrackers (Acc)","LU2903252349",12.042,2498.395424,"core","Core"],
+  ["Xtrackers MSCI Emerging Markets (Acc)","IE00BTJRMP35",82.358,24.438308,"keep","Satellite EM"],
+  ["Vanguard S&P 500 (Acc)","IE00BFMXXD54",128.1675,14,"off","Ridondante"],
+  ["iShares Edge MSCI World Momentum (Acc)","IE00BP3QZ825",100.86,13,"off","Fattoriale"],
+  ["Amundi MSCI EM Swap EUR (Acc)","LU1681045370",7.8477,93,"off","Ridondante"],
+  ["iShares Core S&P 500 (Acc)","IE00B5BMR087",714.79,0.631277,"off","Ridondante"],
+  ["iShares Core MSCI EM IMI (Acc)","IE00BKM4GZ66",48.391,8.304,"off","Ridondante"],
+  ["Ferrari","NL0011585146",356.575,1.016206,"off","Azione singola"],
+  ["Micron Technology","US5951121038",890.75,0.350839,"off","Azione singola"],
+  ["Xtrackers AI & Big Data (Acc)","IE00BGV5VN51",208.4,1.443179,"off","Tematico"],
+  ["iShares Physical Gold ETC","IE00B4ND3602",73.4925,4,"off","Non azionario"],
+  ["iShares Automation & Robotics (Acc)","IE00BYZK4552",18.412,8.325875,"off","Tematico"],
+  ["PayPal Holdings","US70450Y1038",46.77,3.016179,"off","Azione singola"],
+  ["SpaceX","US84615Q1031",128.87,1,"off","Azione singola"],
+  ["iShares MSCI India (Acc)","IE00BZCQB185",7.577,14.981496,"off","Paese singolo"],
+  ["iShares Ageing Population (Acc)","IE00BYZK4669",9.4835,11.77,"off","Tematico"],
+  ["iShares Nasdaq US Biotechnology (Acc)","IE00BYXG2H39",8.9935,12.075295,"off","Tematico"],
+  ["Brunello Cucinelli","IT0004764699",81.09,1.009313,"off","Azione singola"],
+  ["iShares Core MSCI World (Acc)","IE00B4L5Y983",127.4625,0.539,"off","Ridondante"],
+  ["iShares S&P 500 EUR Hedged (Acc)","IE00B3ZW0K18",158.1475,0.308,"off","Ridondante"],
+  ["Xtrackers S&P Select Frontier Swap (Acc)","LU0328476410",27.0225,0.989,"off","Frontiera"],
+  ["Xtrackers MSCI Malaysia (Acc)","LU0514694370",12.635,1.834,"off","Paese singolo"]
+];
+
+const perf = [
+  ["Giornaliero",36.84],["1 settimana",133.55],["1 mese",256.42],["3 mesi",824.02],
+  ["Da inizio anno",4447.81],["6 mesi",4198.79],["1 anno",5343.20],["Dall'inizio",6026.01]
+];
+
+const flows = [
+  ["nov 2025",2325],["dic 2025",0],["gen 2026",3000],["feb 2026",1500],["mar 2026",2200],
+  ["apr 2026",1000],["mag 2026",1001],["giu 2026",3750],["lug 2026",1000],["ago 2026",961.76]
+];
+
+const geo = [
+  ["Stati Uniti",60.24],["Asia sviluppata",8.93],["Asia emergente",6.51],["Eurozona",7.39],
+  ["Giappone",4.40],["Europa non euro",3.01],["Canada",2.61],["Regno Unito",2.55],
+  ["America Latina",1.28],["Australasia",1.22],["Medio Oriente",1.02],["Africa",0.47],
+  ["Europa emergente",0.35],["Non classificato",0.02]
+];
+
+const sectors = [
+  ["Tecnologia",32.38],["Finanza",16.62],["Industria",9.84],["Consumi ciclici",9.54],
+  ["Salute",8.05],["Comunicazioni",8.00],["Consumi difensivi",4.34],["Energia",3.99],
+  ["Materiali di base",3.40],["Utility",2.28],["Immobiliare",1.54],["Altro",0.02]
+];
+
+const emBreak = [
+  ["Fondi 100 % emergenti",8.40],["Quota emergente dentro il core",8.09],["Totale stimato MSCI",16.49],["Riferimento ACWI",10.50]
+];
+
+const fx = [
+  ["USD",62.85],["EUR",7.39],["JPY",4.40],["Valute emergenti",9.63],["GBP",2.55],
+  ["CHF e altre europee",3.01],["CAD",2.61],["AUD",1.22],["Asia sviluppata (HKD, SGD, TWD, KRW)",6.32]
+];
+
+const dmem = [["Sviluppati",90.35,"--c1"],["Emergenti",9.63,"--c2"],["Non classificato",0.02,"--c4"]];
+const caps = [["Large cap",83.31,"--c1"],["Mid cap",15.74,"--c3"],["Small cap",0.70,"--c2"],["Micro cap",0.25,"--c4"]];
+
+const deviations = [
+  ["Core ACWI globale",77.02,85,"LU2903252349"],
+  ["Small cap mondiali",0.00,10,"IE00BF4RFH31"],
+  ["Satellite emergenti",8.40,5,"IE00BTJRMP35 + altri"],
+  ["Coda non a obiettivo",14.58,0,"19 strumenti"]
+];
+
+/* ---------- render ---------- */
+function renderAll(){
+  const C = ["--c1","--c2","--c3","--c4","--c5","--c6"].map(cvar);
+  const POS = cvar("--pos"), NEG = cvar("--neg"), INK3 = cvar("--ink-3");
+  const UNDER = cvar("--accent"), OVER = cvar("--warn");
+
+  barChart(document.getElementById("perfBars"),
+    perf.map(([l,v]) => ({label:l, v, text:"+"+EUR0(v), color:POS})));
+
+  barChart(document.getElementById("flowBars"),
+    flows.map(([l,v]) => ({label:l, v, text: v ? EUR0(v) : "—", color: v ? C[2] : cvar("--line-strong")})));
+
+  barChart(document.getElementById("geoBars"),
+    geo.map(([l,v],i) => ({label:l, v, text:PC(v), color: i<2 ? C[0] : (["Asia emergente","America Latina","Medio Oriente","Africa","Europa emergente"].includes(l) ? C[1] : C[0]) })));
+
+  barChart(document.getElementById("secBars"),
+    sectors.map(([l,v],i) => ({label:l, v, text:PC(v), color: i===0 ? C[1] : C[0]})));
+
+  barChart(document.getElementById("emBars"),
+    emBreak.map(([l,v]) => ({label:l, v, text:PC(v,1), color: l.startsWith("Riferimento") ? INK3 : C[1]})));
+
+  barChart(document.getElementById("fxBars"),
+    fx.map(([l,v],i) => ({label:l, v, text:PC(v,1), color: i===0 ? C[2] : C[0]})));
+
+  /* stacked strips */
+  function strip(nodeId, legId, data){
+    const n = document.getElementById(nodeId), lg = document.getElementById(legId);
+    n.innerHTML = ""; lg.innerHTML = "";
+    data.forEach(([l,v,c]) => {
+      const d = el("div"); d.style.flex = v; d.style.background = cvar(c);
+      d.title = l + " — " + PC(v);
+      if (v > 6) d.appendChild(el("span","tag", PC(v,1)));
+      n.appendChild(d);
+      lg.appendChild(el("span",null,'<span class="dot" style="background:'+cvar(c)+'"></span>'+l+' · '+PC(v,2)));
+    });
+  }
+  strip("dmemStrip","dmemLegend",dmem);
+  strip("capStrip","capLegend",caps);
+
+  /* positions table */
+  const tb = document.querySelector("#posTable tbody");
+  tb.innerHTML = "";
+  const rows = positions.map(([n,i,p,q,cls,role]) => ({n,i,p,q,cls,role,v:p*q}))
+                        .sort((a,b) => b.v - a.v);
+  const mx = rows[0].v;
+  rows.forEach(r => {
+    const w = r.v / TOTAL * 100;
+    const tr = el("tr");
+    tr.innerHTML =
+      '<td><b>'+r.n+'</b><span class="isin">'+r.i+'</span></td>'+
+      '<td><span class="pill '+r.cls+'">'+r.role+'</span></td>'+
+      '<td class="n">'+r.q.toLocaleString("it-IT",{maximumFractionDigits:4})+'</td>'+
+      '<td class="n">'+r.p.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:4})+'</td>'+
+      '<td class="n">'+EUR(r.v)+'</td>'+
+      '<td class="n">'+PC(w)+'</td>'+
+      '<td><span class="minibar" style="width:'+Math.max(2,r.v/mx*100).toFixed(1)+'%;background:'+
+        (r.cls==="core"?cvar("--accent"):r.cls==="keep"?C[0]:cvar("--line-strong"))+'"></span></td>';
+    tb.appendChild(tr);
+  });
+
+  /* deviation chart */
+  const dc = document.getElementById("devChart");
+  dc.innerHTML = "";
+  const span = 16; /* pp displayed each side */
+  deviations.forEach(([l,a,t,sub]) => {
+    const d = a - t;
+    const row = el("div","dev-row");
+    row.appendChild(el("div",null,'<div style="font-size:13.5px;font-weight:600">'+l+
+      '</div><div class="isin">'+sub+' · attuale '+PC(a,1)+' → obiettivo '+t+' %</div>'));
+    const tk = el("div","dev-track");
+    tk.appendChild(el("div","dev-axis"));
+    const bar = el("div","dev-bar");
+    const wpc = Math.min(Math.abs(d)/span*50, 50);
+    bar.style.width = wpc+"%";
+    bar.style.background = d < 0 ? UNDER : OVER;
+    if (d < 0){ bar.style.right = "50%"; bar.style.borderRadius = "3px 0 0 3px"; }
+    else { bar.style.left = "50%"; bar.style.borderRadius = "0 3px 3px 0"; }
+    tk.title = l + " — scostamento " + (d>0?"+":"") + PC(d,1);
+    tk.appendChild(bar);
+    row.appendChild(tk);
+    const v = el("div","dev-val", (d>0?"+":"−") + Math.abs(d).toLocaleString("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1}) + " pp");
+    v.style.color = d < 0 ? UNDER : OVER;
+    row.appendChild(v);
+    dc.appendChild(row);
+  });
+
+  simulate();
+}
+
+/* ---------- simulator ---------- */
+const slider = document.getElementById("slider");
+function simulate(){
+  const sc = +slider.value, core = 1000 - sc;
+  document.getElementById("sliderVal").textContent = EUR0(sc);
+  document.getElementById("coreVal").textContent = EUR0(core);
+
+  const M = 12;
+  const tot12  = TOTAL + 1000*M;
+  const w = {
+    sc:   sc*M / tot12 * 100,
+    core: (30085.68 + core*M) / tot12 * 100,
+    em:   3281.05 / tot12 * 100,
+    tail: 5695.79 / tot12 * 100
+  };
+
+  /* months for small cap to reach 10 % : sc*m = 0.10*(TOTAL + 1000m) */
+  const denom = sc - 100;
+  const months = denom > 0 ? (0.10*TOTAL)/denom : Infinity;
+
+  const C = ["--c1","--c2","--c3","--c4"].map(cvar);
+  barChart(document.getElementById("simBars"), [
+    {label:"Core ACWI",       v:w.core, text:PC(w.core,1), color:cvar("--accent")},
+    {label:"Small cap",       v:w.sc,   text:PC(w.sc,1),   color:C[1]},
+    {label:"Satellite EM",    v:w.em,   text:PC(w.em,1),   color:C[0]},
+    {label:"Coda satelliti",  v:w.tail, text:PC(w.tail,1), color:cvar("--line-strong")}
+  ], {max:100});
+
+  const out = document.getElementById("simOut");
+  out.innerHTML = "";
+  const items = [
+    ["Sul core, ogni mese", EUR0(core)],
+    ["Small cap fra 12 mesi", PC(w.sc,1)],
+    ["Mesi per arrivare al 10 %", months === Infinity ? "mai" : Math.ceil(months) + " mesi"],
+    ["Coda satelliti a 12 mesi", PC(w.tail,1)],
+    ["Versato in small cap in 12 mesi", EUR0(sc*12)]
+  ];
+  items.forEach(([k,v]) => out.appendChild(el("div",null,'<span class="muted">'+k+'</span><b>'+v+'</b>')));
+}
+slider.addEventListener("input", simulate);
+
+/* ---------- tabs ---------- */
+const panels = {geo:"tabGeo", dmem:"tabDmem", sec:"tabSec", cap:"tabCap", fx:"tabFx"};
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected", x === t));
+  Object.entries(panels).forEach(([k,id]) => document.getElementById(id).hidden = (k !== t.dataset.tab));
+}));
+
+renderAll();
+if (window.matchMedia) window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+</script>
