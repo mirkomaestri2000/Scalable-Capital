@@ -1,0 +1,448 @@
+<title>Oltre il PAC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#EDEFF3; --surface:#FBFCFD; --surface-2:#F2F4F8; --line:#DBE0E8; --line-2:#C3CAD6;
+  --ink:#0E141C; --ink-2:#48505E; --ink-3:#79828F;
+  --accent:#1C5CAB; --accent-2:#2A78D6; --accent-soft:#DCE9FA;
+  --s1:#2a78d6; --s2:#eb6834;
+  --r1:#cde2fb; --r2:#b7d3f6; --r3:#86b6ef; --r4:#6da7ec; --r5:#3987e5; --r6:#2a78d6; --r7:#1c5cab; --r8:#184f95;
+  --good:#0a7d4f; --warn:#9A6B00;
+  --grid:#E4E8EF;
+  --shadow:0 1px 1px rgba(14,20,28,.04), 0 8px 24px -18px rgba(14,20,28,.45);
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0D1014; --surface:#161A20; --surface-2:#1C2128; --line:#2A313A; --line-2:#3B434E;
+    --ink:#E7EBF0; --ink-2:#AEB6C2; --ink-3:#7D8794;
+    --accent:#7FB0F0; --accent-2:#3987E5; --accent-soft:#152539;
+    --s1:#3987e5; --s2:#d95926;
+    --r1:#183258; --r2:#1c4076; --r3:#1c5cab; --r4:#2a78d6; --r5:#3987e5; --r6:#6da7ec; --r7:#86b6ef; --r8:#b7d3f6;
+    --good:#3FBE86; --warn:#D3A22B;
+    --grid:#242B34;
+    --shadow:0 1px 1px rgba(0,0,0,.4), 0 10px 28px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0D1014; --surface:#161A20; --surface-2:#1C2128; --line:#2A313A; --line-2:#3B434E;
+  --ink:#E7EBF0; --ink-2:#AEB6C2; --ink-3:#7D8794;
+  --accent:#7FB0F0; --accent-2:#3987E5; --accent-soft:#152539;
+  --s1:#3987e5; --s2:#d95926;
+  --r1:#183258; --r2:#1c4076; --r3:#1c5cab; --r4:#2a78d6; --r5:#3987e5; --r6:#6da7ec; --r7:#86b6ef; --r8:#b7d3f6;
+  --good:#3FBE86; --warn:#D3A22B;
+  --grid:#242B34;
+  --shadow:0 1px 1px rgba(0,0,0,.4), 0 10px 28px -20px rgba(0,0,0,.9);
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px; margin:0 auto; padding:28px 20px 80px}
+h1,h2,h3{font-family:"Bricolage Grotesque","Instrument Sans",sans-serif; font-weight:700; text-wrap:balance; margin:0}
+h1{font-size:clamp(30px,4.6vw,46px); line-height:1.03; letter-spacing:-.022em}
+h2{font-size:clamp(20px,2.5vw,26px); letter-spacing:-.015em}
+h3{font-size:15px; letter-spacing:-.005em; font-weight:700}
+p{margin:0}
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace; font-variant-numeric:tabular-nums}
+.eyebrow{font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.lede{color:var(--ink-2); max-width:64ch; font-size:16px}
+
+/* header */
+header.top{display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end; justify-content:space-between; padding-bottom:22px; border-bottom:1px solid var(--line-2)}
+.stamp{font-size:12px; color:var(--ink-3); text-align:right}
+.stamp b{color:var(--ink-2); font-weight:600}
+
+/* headline figures */
+.figs{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:0; margin:26px 0 6px;
+  border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); overflow:hidden}
+.fig{padding:16px 18px 15px; border-right:1px solid var(--line)}
+.fig:last-child{border-right:none}
+.fig .k{font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+.fig .v{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; font-size:26px; font-weight:700; letter-spacing:-.02em; margin-top:4px; line-height:1.1}
+.fig .s{font-size:12.5px; color:var(--ink-2); margin-top:3px}
+.fig.hl{background:var(--accent-soft)}
+.fig.hl .v{color:var(--accent)}
+
+section{margin-top:46px}
+.sechead{display:flex; flex-wrap:wrap; gap:14px 20px; align-items:baseline; justify-content:space-between; margin-bottom:6px}
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px 18px 14px; margin-top:16px}
+.panel.flat{box-shadow:none; background:var(--surface-2)}
+
+/* controls */
+.ctl{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.seg{display:inline-flex; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:2px; gap:2px}
+.seg button{font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-2); background:none; border:0; padding:5px 11px; border-radius:6px; cursor:pointer; line-height:1.3}
+.seg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.seg button:focus-visible, .rowbtn:focus-visible, .yr:focus-visible{outline:2px solid var(--accent-2); outline-offset:2px}
+.yr{font:inherit; font-size:12.5px; font-weight:600; background:var(--surface-2); border:1px solid var(--line); color:var(--ink-2); border-radius:7px; padding:5px 11px; cursor:pointer}
+.yr[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:#fff}
+:root[data-theme="dark"] .yr[aria-pressed="true"], :root:not([data-theme="light"]) .yr[aria-pressed="true"]{color:#0D1014}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .yr[aria-pressed="true"]{color:#fff}}
+
+/* legend */
+.legend{display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; color:var(--ink-2)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.swatch{width:11px; height:11px; border-radius:3px; display:inline-block}
+
+/* chart */
+.chartbox{position:relative; overflow-x:auto}
+svg{display:block}
+svg text{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums}
+.tip{position:absolute; pointer-events:none; z-index:5; background:var(--surface); border:1px solid var(--line-2); border-radius:8px;
+  box-shadow:0 6px 22px -10px rgba(0,0,0,.45); padding:8px 10px; font-size:12.5px; color:var(--ink); min-width:150px; opacity:0; transition:opacity .1s}
+.tip.on{opacity:1}
+.tip .t{font-weight:700; margin-bottom:4px; font-size:12.5px}
+.tip .r{display:flex; justify-content:space-between; gap:14px; color:var(--ink-2)}
+.tip .r b{color:var(--ink); font-weight:600; font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums}
+
+/* geo rows */
+.georow{display:grid; grid-template-columns:150px 1fr 92px; gap:12px; align-items:center; width:100%;
+  background:none; border:0; border-bottom:1px solid var(--line); padding:9px 2px; cursor:pointer; text-align:left; font:inherit; color:var(--ink)}
+.georow:hover{background:var(--surface-2)}
+.georow .nm{font-size:13.5px; font-weight:500; display:flex; align-items:center; gap:7px}
+.georow .nm .chev{color:var(--ink-3); font-size:10px; transition:transform .15s; display:inline-block}
+.georow[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.bartrack{display:block; height:16px; background:var(--surface-2); border-radius:3px; overflow:hidden}
+.barfill{display:block; height:100%; min-width:3px; border-radius:0 3px 3px 0}
+.georow .amt{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; font-size:13px; text-align:right; font-weight:500}
+.drill{padding:6px 0 12px 12px; border-bottom:1px solid var(--line); border-left:2px solid var(--accent-2); margin-left:6px; background:var(--surface-2)}
+.drill .dr{display:grid; grid-template-columns:1fr 88px; gap:10px; font-size:12.5px; color:var(--ink-2); padding:3px 10px 3px 8px}
+.drill .dr b{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; text-align:right; color:var(--ink); font-weight:500}
+.drill .hd{font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); padding:2px 10px 4px 8px; font-weight:600}
+
+/* table */
+.tbl{width:100%; border-collapse:collapse; font-size:13px}
+.tbl th{text-align:left; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line-2)}
+.tbl td{padding:7px 8px; border-bottom:1px solid var(--line); color:var(--ink-2)}
+.tbl td.n{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; text-align:right; color:var(--ink); font-weight:500; white-space:nowrap}
+.tbl td.name{color:var(--ink); font-weight:500}
+.tbl tr:last-child td{border-bottom:none}
+.scroll{max-height:340px; overflow-y:auto; overflow-x:auto}
+.pill{display:inline-block; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:99px; border:1px solid currentColor; white-space:nowrap}
+.pill.extra{color:var(--s2)}
+.pill.pac{color:var(--s1)}
+
+/* notes */
+.notes{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; margin-top:16px}
+.note{background:var(--surface); border:1px solid var(--line); border-left:3px solid var(--line-2); border-radius:8px; padding:14px 16px}
+.note.flag{border-left-color:var(--s2)}
+.note.ok{border-left-color:var(--good)}
+.note h3{margin-bottom:5px}
+.note p{font-size:13.5px; color:var(--ink-2)}
+.note p + p{margin-top:7px}
+footer{margin-top:52px; padding-top:18px; border-top:1px solid var(--line-2); font-size:12px; color:var(--ink-3); max-width:70ch}
+@media (max-width:620px){
+  .georow{grid-template-columns:110px 1fr 78px; gap:8px}
+  .fig{border-right:none; border-bottom:1px solid var(--line)}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div>
+    <p class="eyebrow">Portafoglio Scalable Capital &middot; broker</p>
+    <h1>Oltre il PAC</h1>
+    <p class="lede" style="margin-top:10px">Quanto entra ogni mese in automatico, quanto ci aggiungi a mano e dove finisce, geograficamente. Dati letti dal conto l'8 settembre 2026.</p>
+  </div>
+  <div class="stamp">
+    <div>Valorizzazione <b id="ts">8 set 2026, 15:15</b></div>
+    <div>Storico ordini da <b>ago 2024</b></div>
+  </div>
+</header>
+
+<div class="figs">
+  <div class="fig"><div class="k">Valore attuale</div><div class="v" id="f-val"></div><div class="s" id="f-val-s"></div></div>
+  <div class="fig"><div class="k">PAC versato</div><div class="v" id="f-pac"></div><div class="s" id="f-pac-s"></div></div>
+  <div class="fig hl"><div class="k">Acquisti extra</div><div class="v" id="f-ext"></div><div class="s" id="f-ext-s"></div></div>
+  <div class="fig"><div class="k">Quota fai-da-te</div><div class="v" id="f-share"></div><div class="s">del capitale investito finora</div></div>
+</div>
+
+<section>
+  <div class="sechead">
+    <div>
+      <h2>Il ritmo degli acquisti</h2>
+      <p class="lede" style="margin-top:6px">Ogni colonna è un mese: in blu il piano di accumulo, in arancio gli ordini che hai inserito tu. Passa sopra una colonna per il dettaglio.</p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Scala del grafico">
+        <button id="m-abs" aria-pressed="true">Mensile</button>
+        <button id="m-cum" aria-pressed="false">Cumulato</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="legend" style="margin-bottom:10px">
+      <span><i class="swatch" style="background:var(--s1)"></i> PAC (piano di accumulo)</span>
+      <span><i class="swatch" style="background:var(--s2)"></i> Acquisti extra</span>
+    </div>
+    <div class="chartbox" id="flowbox"><div class="tip" id="flowtip"></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <div>
+      <h2>Gli ordini fuori piano</h2>
+      <p class="lede" style="margin-top:6px">Ogni acquisto extra, con data e strumento. Filtra per anno.</p>
+    </div>
+    <div class="ctl" id="yrs"></div>
+  </div>
+  <div class="panel" style="padding-top:12px">
+    <div class="scroll"><table class="tbl" id="extratbl"></table></div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <div>
+      <h2>Dove sei esposto, geograficamente</h2>
+      <p class="lede" style="margin-top:6px">Trasparenza per sottostante: ogni ETF viene scomposto nei paesi che contiene. Clicca una riga per vedere quali strumenti la generano.</p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Unità di misura">
+        <button id="u-pct" aria-pressed="true">%</button>
+        <button id="u-eur" aria-pressed="false">Euro</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <div id="devbar"></div>
+    <div id="georows" style="margin-top:16px"></div>
+  </div>
+</section>
+
+<section>
+  <div class="sechead">
+    <div>
+      <h2>Concentrazione per strumento</h2>
+      <p class="lede" style="margin-top:6px">22 posizioni in portafoglio, ma il peso è quasi tutto su una.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="chartbox" id="holdbox"><div class="tip" id="holdtip"></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Cosa dicono i numeri</h2>
+  <div class="notes" id="notes"></div>
+</section>
+
+<footer>
+  Fonte: conto Scalable Capital, letture dell'8 settembre 2026. La scomposizione geografica è quella che il broker calcola guardando dentro gli ETF (analisi di portafoglio); la somma delle aree, 38.742 €, è leggermente inferiore al valore di mercato del conto perché l'analisi si basa su una fotografia del giorno prima. Gli importi degli ordini sono i controvalori eseguiti, al netto di eventuali vendite (poche e marginali). Questa pagina descrive dati passati, non è una raccomandazione di investimento.
+</footer>
+</div>
+
+<script>
+const TX = [{"d": "2024-08-06", "i": "IE00BKM4GZ66", "n": "iShares Core MSCI EM IMI", "a": 30.67, "k": "extra"}, {"d": "2024-08-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 29.97, "k": "pac"}, {"d": "2024-08-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 14.99, "k": "pac"}, {"d": "2024-08-07", "i": "IE00B3ZW0K18", "n": "iShares S&P 500 EUR Hedged", "a": 14.95, "k": "pac"}, {"d": "2024-08-07", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2024-08-07", "i": "LU0514694370", "n": "Xtrackers MSCI Malaysia", "a": 10.0, "k": "pac"}, {"d": "2024-08-16", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 20.0, "k": "pac"}, {"d": "2024-09-04", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 20.0, "k": "pac"}, {"d": "2024-09-09", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 29.98, "k": "pac"}, {"d": "2024-09-09", "i": "IE00B3ZW0K18", "n": "iShares S&P 500 EUR Hedged", "a": 19.89, "k": "pac"}, {"d": "2024-09-09", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2024-09-16", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 20.0, "k": "pac"}, {"d": "2024-09-19", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 19.5, "k": "pac"}, {"d": "2024-10-04", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 20.0, "k": "pac"}, {"d": "2024-10-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 29.89, "k": "pac"}, {"d": "2024-10-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 15.0, "k": "pac"}, {"d": "2024-10-07", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2024-10-07", "i": "LU0514694370", "n": "Xtrackers MSCI Malaysia", "a": 9.99, "k": "pac"}, {"d": "2024-10-10", "i": "IE00B4L5Y983", "n": "iShares Core MSCI World", "a": 19.97, "k": "pac"}, {"d": "2024-10-16", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 9.99, "k": "pac"}, {"d": "2024-10-21", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 20.01, "k": "pac"}, {"d": "2024-11-01", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 74.78, "k": "pac"}, {"d": "2024-11-01", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2024-11-01", "i": "IE00BKM4GZ66", "n": "iShares Core MSCI EM IMI", "a": 10.0, "k": "pac"}, {"d": "2024-11-04", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 15.0, "k": "pac"}, {"d": "2024-11-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 19.99, "k": "pac"}, {"d": "2024-11-08", "i": "NL0015435975", "n": "Davide Campari", "a": 19.17, "k": "extra"}, {"d": "2024-11-11", "i": "IE00B4L5Y983", "n": "iShares Core MSCI World", "a": 24.99, "k": "pac"}, {"d": "2024-11-13", "i": "US0545361075", "n": "AXA ADR", "a": 34.49, "k": "extra"}, {"d": "2024-11-18", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 29.98, "k": "pac"}, {"d": "2024-11-18", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 10.0, "k": "pac"}, {"d": "2024-11-18", "i": "LU0328476410", "n": "Xtrackers S&P Frontier", "a": 9.98, "k": "pac"}, {"d": "2024-12-02", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 40.13, "k": "pac"}, {"d": "2024-12-02", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2024-12-04", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 10.0, "k": "pac"}, {"d": "2024-12-09", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 10.0, "k": "pac"}, {"d": "2024-12-09", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 9.97, "k": "pac"}, {"d": "2024-12-10", "i": "IE00B4L5Y983", "n": "iShares Core MSCI World", "a": 9.95, "k": "pac"}, {"d": "2024-12-16", "i": "LU0328476410", "n": "Xtrackers S&P Frontier", "a": 10.0, "k": "pac"}, {"d": "2024-12-16", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 9.99, "k": "pac"}, {"d": "2024-12-16", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 9.95, "k": "pac"}, {"d": "2025-01-02", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 40.12, "k": "pac"}, {"d": "2025-01-02", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 10.0, "k": "pac"}, {"d": "2025-01-06", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 10.0, "k": "pac"}, {"d": "2025-01-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 9.99, "k": "pac"}, {"d": "2025-01-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 9.87, "k": "pac"}, {"d": "2025-01-16", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 24.95, "k": "pac"}, {"d": "2025-01-16", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 10.0, "k": "pac"}, {"d": "2025-02-03", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 34.99, "k": "pac"}, {"d": "2025-02-03", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 5.0, "k": "pac"}, {"d": "2025-02-05", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 4.99, "k": "pac"}, {"d": "2025-02-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 14.86, "k": "pac"}, {"d": "2025-02-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 9.99, "k": "pac"}, {"d": "2025-02-17", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 39.96, "k": "pac"}, {"d": "2025-02-17", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 10.0, "k": "pac"}, {"d": "2025-03-03", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 34.65, "k": "pac"}, {"d": "2025-03-03", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 5.0, "k": "pac"}, {"d": "2025-03-03", "i": "GB00B4X3Q493", "n": "Afentra", "a": 1.54, "k": "extra"}, {"d": "2025-03-04", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 272.93, "k": "extra"}, {"d": "2025-03-04", "i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "a": 211.27, "k": "extra"}, {"d": "2025-03-04", "i": "IE00BYZK4669", "n": "iShares Ageing Population", "a": 4.99, "k": "pac"}, {"d": "2025-03-05", "i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "a": 305.54, "k": "extra"}, {"d": "2025-03-07", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 90.0, "k": "pac"}, {"d": "2025-03-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 20.0, "k": "pac"}, {"d": "2025-03-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 15.0, "k": "pac"}, {"d": "2025-03-13", "i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "a": 293.95, "k": "extra"}, {"d": "2025-03-13", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 30.0, "k": "pac"}, {"d": "2025-04-01", "i": "IE00B5BMR087", "n": "iShares Core S&P 500", "a": 100.0, "k": "pac"}, {"d": "2025-04-01", "i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "a": 5.0, "k": "pac"}, {"d": "2025-04-04", "i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "a": 266.61, "k": "extra"}, {"d": "2025-04-07", "i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "a": 250.49, "k": "extra"}, {"d": "2025-04-07", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 90.0, "k": "pac"}, {"d": "2025-04-07", "i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "a": 20.0, "k": "pac"}, {"d": "2025-04-07", "i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "a": 15.0, "k": "pac"}, {"d": "2025-04-14", "i": "IE00BZCQB185", "n": "iShares MSCI India", "a": 10.0, "k": "pac"}, {"d": "2025-04-25", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 500.0, "k": "pac"}, {"d": "2025-05-26", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-07-02", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-07-03", "i": "LU1681045370", "n": "Amundi MSCI EM Swap", "a": 496.79, "k": "extra"}, {"d": "2025-07-16", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 497.46, "k": "extra"}, {"d": "2025-07-24", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 496.39, "k": "extra"}, {"d": "2025-08-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-08-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 994.35, "k": "extra"}, {"d": "2025-08-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 498.16, "k": "extra"}, {"d": "2025-08-01", "i": "NL0011585146", "n": "Ferrari", "a": 388.9, "k": "extra"}, {"d": "2025-08-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 256.5, "k": "extra"}, {"d": "2025-08-29", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 591.15, "k": "extra"}, {"d": "2025-09-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-09-02", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 549.14, "k": "extra"}, {"d": "2025-09-05", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 494.29, "k": "extra"}, {"d": "2025-09-26", "i": "IT0004764699", "n": "Brunello Cucinelli", "a": 83.59, "k": "extra"}, {"d": "2025-10-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-10-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 394.91, "k": "extra"}, {"d": "2025-10-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 392.65, "k": "extra"}, {"d": "2025-11-03", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2025-11-07", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 496.86, "k": "extra"}, {"d": "2025-11-13", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 494.3, "k": "extra"}, {"d": "2025-11-14", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 253.95, "k": "extra"}, {"d": "2025-11-18", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 292.2, "k": "extra"}, {"d": "2025-11-21", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 251.1, "k": "extra"}, {"d": "2025-12-01", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-01-12", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-01-13", "i": "US70450Y1038", "n": "PayPal", "a": 148.56, "k": "extra"}, {"d": "2026-01-19", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 795.9, "k": "extra"}, {"d": "2026-01-20", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 293.05, "k": "extra"}, {"d": "2026-01-20", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 273.86, "k": "extra"}, {"d": "2026-01-29", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 491.34, "k": "extra"}, {"d": "2026-02-02", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 696.8, "k": "extra"}, {"d": "2026-02-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-03-03", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 790.8, "k": "extra"}, {"d": "2026-03-03", "i": "IE00BKM4GZ66", "n": "iShares Core MSCI EM IMI", "a": 288.63, "k": "extra"}, {"d": "2026-03-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-03-31", "i": "US70450Y1038", "n": "PayPal", "a": 0.31, "k": "reinv"}, {"d": "2026-04-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-05-08", "i": "NL0011585146", "n": "Ferrari", "a": 2.51, "k": "reinv"}, {"d": "2026-05-11", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-05-11", "i": "NL0011585146", "n": "Ferrari", "a": 2.15, "k": "reinv"}, {"d": "2026-05-20", "i": "IT0004764699", "n": "Brunello Cucinelli", "a": 0.76, "k": "reinv"}, {"d": "2026-06-05", "i": "IE00BP3QZ825", "n": "iShares MSCI World Momentum", "a": 987.9, "k": "extra"}, {"d": "2026-06-09", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 464.11, "k": "extra"}, {"d": "2026-06-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-06-11", "i": "IE00B4ND3602", "n": "iShares Physical Gold ETC", "a": 275.24, "k": "extra"}, {"d": "2026-06-22", "i": "US5951121038", "n": "Micron Technology", "a": 150.0, "k": "pac"}, {"d": "2026-06-23", "i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "a": 332.9, "k": "extra"}, {"d": "2026-06-23", "i": "IE00BP3QZ825", "n": "iShares MSCI World Momentum", "a": 322.92, "k": "extra"}, {"d": "2026-06-23", "i": "US84615Q1031", "n": "SpaceX", "a": 131.65, "k": "extra"}, {"d": "2026-06-25", "i": "US70450Y1038", "n": "PayPal", "a": 0.31, "k": "reinv"}, {"d": "2026-07-01", "i": "US5951121038", "n": "Micron Technology", "a": 200.0, "k": "pac"}, {"d": "2026-07-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-07-21", "i": "US5951121038", "n": "Micron Technology", "a": 0.04, "k": "reinv"}, {"d": "2026-08-10", "i": "LU2903252349", "n": "Scalable MSCI AC World", "a": 1000.0, "k": "pac"}, {"d": "2026-08-19", "i": "DE000BB6MJT8", "n": "Turbo Short Nasdaq 100", "a": 49.62, "k": "extra"}];
+const GEO = {"total": 38741.78, "blocks": [{"id": "developed", "name": "Mercati sviluppati", "val": 35003.63, "w": 0.9035111874, "subs": [{"name": "Stati Uniti", "val": 23338.35, "w": 60.241, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 19151.25}, {"n": "Vanguard S&P 500 (Acc)", "v": 1787.37}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 739.41}, {"n": "iShares Core S&P 500 (Acc)", "v": 448.53}, {"n": "Micron Technology", "v": 312.86}, {"n": "Xtrackers Artificial Intelligence & Big Data (Acc)", "v": 250.15}, {"n": "PayPal Holdings", "v": 141.23}]}, {"name": "Asia sviluppata", "val": 3460.55, "w": 8.932, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 1923.86}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 944.55}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 346.11}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 185.17}, {"n": "Xtrackers Artificial Intelligence & Big Data (Acc)", "v": 25.87}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 24.11}, {"n": "iShares Automation & Robotics (Acc)", "v": 5.46}]}, {"name": "Eurozona", "val": 2862.84, "w": 7.39, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 2212.89}, {"n": "Ferrari", "v": 362.76}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 146.78}, {"n": "Brunello Cucinelli", "v": 81.94}, {"n": "iShares Automation & Robotics (Acc)", "v": 15.58}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 12.15}, {"n": "iShares Ageing Population (Acc)", "v": 8.62}]}, {"name": "Giappone", "val": 1705.4, "w": 4.402, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 1520.42}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 149.01}, {"n": "iShares Automation & Robotics (Acc)", "v": 22.39}, {"n": "iShares Ageing Population (Acc)", "v": 7.05}, {"n": "iShares Core MSCI World (Acc)", "v": 3.95}, {"n": "Xtrackers Artificial Intelligence & Big Data (Acc)", "v": 2.59}]}, {"name": "Europa non-euro", "val": 1164.52, "w": 3.006, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 1071.82}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 64.61}, {"n": "iShares Automation & Robotics (Acc)", "v": 11.31}, {"n": "iShares Ageing Population (Acc)", "v": 7.26}, {"n": "Vanguard S&P 500 (Acc)", "v": 4.85}, {"n": "iShares Core MSCI World (Acc)", "v": 2.78}, {"n": "iShares Core S&P 500 (Acc)", "v": 1.22}]}, {"name": "Canada", "val": 1010.98, "w": 2.61, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 909.24}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 90.03}, {"n": "iShares Automation & Robotics (Acc)", "v": 4.64}, {"n": "iShares Ageing Population (Acc)", "v": 3.75}, {"n": "iShares Core MSCI World (Acc)", "v": 2.34}]}, {"name": "Regno Unito", "val": 987.75, "w": 2.55, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 909.24}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 65.79}, {"n": "iShares Ageing Population (Acc)", "v": 5.22}, {"n": "iShares Core MSCI World (Acc)", "v": 2.34}, {"n": "iShares Nasdaq US Biotechnology (Acc)", "v": 2.14}, {"n": "iShares Automation & Robotics (Acc)", "v": 1.74}]}, {"name": "Australasia", "val": 473.24, "w": 1.222, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 451.61}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 15.6}, {"n": "iShares Ageing Population (Acc)", "v": 4.18}, {"n": "iShares Core MSCI World (Acc)", "v": 1.16}]}]}, {"id": "emerging", "name": "Mercati emergenti", "val": 3731.6, "w": 0.096319805, "subs": [{"name": "Asia emergente", "val": 2522.26, "w": 6.51, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 1267.52}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 695.71}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 254.95}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 141.7}, {"n": "iShares MSCI India (Acc)", "v": 113.11}, {"n": "Xtrackers MSCI Malaysia (Acc)", "v": 23.17}, {"n": "Xtrackers Artificial Intelligence & Big Data (Acc)", "v": 14.71}]}, {"name": "America Latina", "val": 495.19, "w": 1.278, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 280.0}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 132.89}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 49.02}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 26.97}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 3.01}, {"n": "iShares Ageing Population (Acc)", "v": 1.51}, {"n": "Vanguard S&P 500 (Acc)", "v": 1.08}]}, {"name": "Medio Oriente", "val": 394.63, "w": 1.019, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 234.84}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 92.64}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 34.11}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 19.22}, {"n": "iShares Edge MSCI World Momentum Factor (Acc)", "v": 10.22}, {"n": "iShares Ageing Population (Acc)", "v": 2.64}]}, {"name": "Africa", "val": 182.11, "w": 0.47, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 96.34}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 53.39}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 19.58}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 11.27}, {"n": "iShares Ageing Population (Acc)", "v": 1.53}]}, {"name": "Europa emergente", "val": 137.41, "w": 0.355, "c": [{"n": "Scalable MSCI AC World Xtrackers (Acc)", "v": 72.26}, {"n": "Xtrackers MSCI Emerging Markets (Acc)", "v": 41.04}, {"n": "Amundi MSCI Emerging Markets Swap EUR (Acc)", "v": 14.46}, {"n": "iShares Core MSCI Emerging Markets IMI (Acc)", "v": 9.03}]}]}, {"id": "uncat", "name": "Non classificato", "val": 6.55, "w": 0.0001690081, "subs": []}]};
+const HOLD = [{"i": "LU2903252349", "n": "Scalable MSCI AC World", "v": 30095.67}, {"i": "IE00BTJRMP35", "n": "Xtrackers MSCI Emerging Markets", "v": 2019.24}, {"i": "IE00BFMXXD54", "n": "Vanguard S&P 500", "v": 1795.08}, {"i": "IE00BP3QZ825", "n": "iShares MSCI World Momentum", "v": 1312.87}, {"i": "LU1681045370", "n": "Amundi MSCI EM Swap", "v": 732.47}, {"i": "IE00B5BMR087", "n": "iShares Core S&P 500", "v": 451.37}, {"i": "IE00BKM4GZ66", "n": "iShares Core MSCI EM IMI", "v": 403.24}, {"i": "NL0011585146", "n": "Ferrari", "v": 362.23}, {"i": "US5951121038", "n": "Micron Technology", "v": 312.3}, {"i": "IE00BGV5VN51", "n": "Xtrackers AI & Big Data", "v": 301.37}, {"i": "IE00B4ND3602", "n": "iShares Physical Gold ETC", "v": 294.17}, {"i": "IE00BYZK4552", "n": "iShares Automation & Robotics", "v": 153.25}, {"i": "US70450Y1038", "n": "PayPal", "v": 141.48}, {"i": "US84615Q1031", "n": "SpaceX", "v": 128.47}, {"i": "IE00BZCQB185", "n": "iShares MSCI India", "v": 113.38}, {"i": "IE00BYZK4669", "n": "iShares Ageing Population", "v": 111.44}, {"i": "IE00BYXG2H39", "n": "iShares Nasdaq US Biotech", "v": 108.32}, {"i": "IT0004764699", "n": "Brunello Cucinelli", "v": 82.07}, {"i": "IE00B4L5Y983", "n": "iShares Core MSCI World", "v": 68.68}, {"i": "IE00B3ZW0K18", "n": "iShares S&P 500 EUR Hedged", "v": 48.71}, {"i": "LU0328476410", "n": "Xtrackers S&P Frontier", "v": 26.93}, {"i": "LU0514694370", "n": "Xtrackers MSCI Malaysia", "v": 23.1}];
+const NAV = 39083.35, GAIN = 6046.84;
+
+const eur = (v,d=0)=> v.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}) + ' €';
+const pct = (v,d=1)=> v.toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d}) + ' %';
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- totals ---------- */
+const totPac = TX.filter(t=>t.k==='pac').reduce((s,t)=>s+t.a,0);
+const totExt = TX.filter(t=>t.k==='extra').reduce((s,t)=>s+t.a,0);
+const totInv = totPac + totExt;
+document.getElementById('f-val').textContent = eur(NAV);
+document.getElementById('f-val-s').innerHTML = '+' + eur(GAIN) + ' sul capitale versato';
+document.getElementById('f-pac').textContent = eur(totPac);
+document.getElementById('f-pac-s').textContent = 'da ago 2024, oggi 1.000 €/mese';
+document.getElementById('f-ext').textContent = eur(totExt);
+document.getElementById('f-ext-s').textContent = TX.filter(t=>t.k==='extra').length + ' ordini manuali';
+document.getElementById('f-share').textContent = pct(totExt/totInv*100,0);
+
+/* ---------- monthly series ---------- */
+const bym = new Map();
+TX.forEach(t=>{ if(t.k==='reinv') return;
+  const m = t.d.slice(0,7);
+  if(!bym.has(m)) bym.set(m,{m,pac:0,ext:0,items:[]});
+  const o = bym.get(m); o[t.k==='pac'?'pac':'ext'] += t.a; o.items.push(t);
+});
+const first='2024-08', last='2026-09';
+const months=[]; let [y,mo]=first.split('-').map(Number);
+while(true){ const key = y+'-'+String(mo).padStart(2,'0');
+  months.push(bym.get(key) || {m:key,pac:0,ext:0,items:[]});
+  if(key===last) break; mo++; if(mo>12){mo=1;y++;} }
+
+let mode='abs';
+function drawFlow(){
+  const box=document.getElementById('flowbox'), tip=document.getElementById('flowtip');
+  const W=Math.max(760, months.length*32), H=290, PL=54, PR=14, PT=14, PB=44;
+  const iw=W-PL-PR, ih=H-PT-PB;
+  const data = months.map((d,i)=>{
+    if(mode==='abs') return {...d, a:d.pac, b:d.ext};
+    let p=0,e=0; for(let j=0;j<=i;j++){p+=months[j].pac; e+=months[j].ext;}
+    return {...d, a:p, b:e};
+  });
+  const max = Math.max(...data.map(d=>d.a+d.b))*1.08 || 1;
+  const step = iw/data.length, bw = Math.min(24, step*0.62);
+  const y = v => PT + ih - (v/max)*ih;
+  const ticks=[]; const raw=max/4;
+  const mag=Math.pow(10,Math.floor(Math.log10(raw))); const nice=[1,2,2.5,5,10].find(k=>k*mag>=raw)*mag;
+  for(let v=0; v<=max; v+=nice) ticks.push(v);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Acquisti mensili suddivisi tra PAC e ordini extra">`;
+  ticks.forEach(t=>{ s+=`<line x1="${PL}" x2="${W-PR}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${css('--grid')}" stroke-width="1"/>`;
+    s+=`<text x="${PL-9}" y="${(y(t)+4).toFixed(1)}" text-anchor="end" font-size="10.5" fill="${css('--ink-3')}">${t>=1000?(t/1000).toLocaleString('it-IT')+'k':t}</text>`; });
+  data.forEach((d,i)=>{
+    const x = PL + i*step + (step-bw)/2;
+    const hb = (d.b/max)*ih, ha=(d.a/max)*ih;
+    const yb = PT+ih-hb, ya = yb-ha-(hb>0&&ha>0?2:0);
+    if(d.b>0) s+=`<path d="M${x},${PT+ih} v${-(hb-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${hb-4} z" fill="${css('--s2')}"/>`;
+    if(d.a>0) s+=`<path d="M${x},${(ya+ha).toFixed(1)} v${-(ha-4)} a4,4 0 0 1 4,-4 h${bw-8} a4,4 0 0 1 4,4 v${ha-4} z" fill="${css('--s1')}"/>`;
+    const mi = Number(d.m.slice(5,7))-1;
+    if(mi===0 || i===0) s+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${css('--ink-2')}">${d.m.slice(0,4)}</text>`;
+    if(step>22 || mi%3===0) s+=`<text x="${(x+bw/2).toFixed(1)}" y="${H-10}" text-anchor="middle" font-size="9.5" fill="${css('--ink-3')}">${MESI[mi]}</text>`;
+    s+=`<rect class="hit" data-i="${i}" x="${PL+i*step}" y="${PT}" width="${step}" height="${ih}" fill="transparent"/>`;
+  });
+  s+=`<line x1="${PL}" x2="${W-PR}" y1="${PT+ih}" y2="${PT+ih}" stroke="${css('--line-2')}" stroke-width="1"/></svg>`;
+  box.innerHTML = s + '<div class="tip" id="flowtip"></div>';
+  const tp = document.getElementById('flowtip');
+  box.querySelectorAll('.hit').forEach(r=>{
+    r.addEventListener('mouseenter', ()=>{
+      const d = data[+r.dataset.i], raw = months[+r.dataset.i];
+      const mi = Number(d.m.slice(5,7))-1;
+      const names = [...new Set(raw.items.map(t=>t.n))].slice(0,3).join(', ');
+      tp.innerHTML = `<div class="t">${MESI[mi]} ${d.m.slice(0,4)}${mode==='cum'?' · cumulato':''}</div>`
+        + `<div class="r"><span>PAC</span><b>${eur(d.a)}</b></div>`
+        + `<div class="r"><span>Extra</span><b>${eur(d.b)}</b></div>`
+        + `<div class="r" style="margin-top:4px;border-top:1px solid var(--line);padding-top:4px"><span>Totale</span><b>${eur(d.a+d.b)}</b></div>`
+        + (mode==='abs' && names ? `<div style="margin-top:5px;color:var(--ink-3);font-size:11.5px;max-width:200px">${names}</div>` : '');
+      tp.classList.add('on');
+      const bb = r.getBoundingClientRect(), pb = box.getBoundingClientRect();
+      const left = Math.min(bb.left-pb.left+box.scrollLeft+14, box.scrollLeft+box.clientWidth-215);
+      tp.style.left = Math.max(4,left)+'px'; tp.style.top = '18px';
+    });
+    r.addEventListener('mouseleave', ()=> tp.classList.remove('on'));
+  });
+}
+document.getElementById('m-abs').onclick = ()=>{mode='abs'; sync(); };
+document.getElementById('m-cum').onclick = ()=>{mode='cum'; sync(); };
+function sync(){
+  document.getElementById('m-abs').setAttribute('aria-pressed', mode==='abs');
+  document.getElementById('m-cum').setAttribute('aria-pressed', mode==='cum');
+  drawFlow();
+}
+
+/* ---------- extra orders table ---------- */
+const extras = TX.filter(t=>t.k==='extra').slice().reverse();
+const years = [...new Set(extras.map(t=>t.d.slice(0,4)))].sort().reverse();
+let yr='tutti';
+function drawYears(){
+  const c=document.getElementById('yrs');
+  c.innerHTML = ['tutti',...years].map(v=>`<button class="yr" data-y="${v}" aria-pressed="${v===yr}">${v==='tutti'?'Tutti':v}</button>`).join('');
+  c.querySelectorAll('.yr').forEach(b=> b.onclick=()=>{ yr=b.dataset.y; drawYears(); drawExtra(); });
+}
+function drawExtra(){
+  const rows = extras.filter(t=> yr==='tutti' || t.d.startsWith(yr));
+  const sum = rows.reduce((s,t)=>s+t.a,0);
+  const t=document.getElementById('extratbl');
+  t.innerHTML = `<thead><tr><th>Data</th><th>Strumento</th><th style="text-align:right">Importo</th></tr></thead><tbody>`
+   + rows.map(r=>{
+      const [Y,M,D]=r.d.split('-');
+      return `<tr><td class="mono" style="white-space:nowrap">${D} ${MESI[+M-1]} ${Y}</td><td class="name">${r.n}</td><td class="n">${eur(r.a,2)}</td></tr>`;
+     }).join('')
+   + `</tbody><tfoot><tr><td colspan="2" style="font-weight:600;color:var(--ink);border-top:1px solid var(--line-2);border-bottom:none;padding-top:9px">${rows.length} ordini${yr==='tutti'?'':' nel '+yr}</td><td class="n" style="border-top:1px solid var(--line-2);border-bottom:none;padding-top:9px">${eur(sum)}</td></tr></tfoot>`;
+}
+
+/* ---------- geography ---------- */
+let unit='pct';
+const subs = GEO.blocks.flatMap(b=> b.subs.map(s=>({...s, block:b.id}))).concat(
+  GEO.blocks.filter(b=>b.id==='uncat').map(b=>({name:b.name, val:b.val, w:b.w*100, c:[], block:'uncat'})));
+subs.sort((a,b)=>b.val-a.val);
+const RAMP=['--r8','--r7','--r6','--r5','--r4','--r3','--r2','--r1'];
+function rampFor(w){
+  const q = [50,20,8,4,2,1,0.5];
+  let i = q.findIndex(t=> w>=t); if(i<0) i=7;
+  return RAMP[Math.min(i,7)];
+}
+function drawDevBar(){
+  const d = GEO.blocks.find(b=>b.id==='developed'), e = GEO.blocks.find(b=>b.id==='emerging');
+  const dw = d.w*100, ew = e.w*100;
+  document.getElementById('devbar').innerHTML =
+   `<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);margin-bottom:6px">
+      <span><b style="color:var(--ink)">Mercati sviluppati</b> · ${unit==='pct'?pct(dw):eur(d.val)}</span>
+      <span><b style="color:var(--ink)">Emergenti</b> · ${unit==='pct'?pct(ew):eur(e.val)}</span>
+    </div>
+    <div style="display:flex;height:26px;gap:2px;border-radius:5px;overflow:hidden">
+      <div style="width:${dw}%;background:var(--s1)"></div>
+      <div style="flex:1;background:var(--s2)"></div>
+    </div>`;
+}
+let open=null;
+function drawGeo(){
+  const max = Math.max(...subs.map(s=>s.w));
+  const c=document.getElementById('georows');
+  c.innerHTML = subs.map((s,i)=>{
+    const val = unit==='pct'? pct(s.w) : eur(s.val);
+    return `<button class="georow" data-i="${i}" aria-expanded="${open===i}">
+        <span class="nm"><span class="chev">▶</span>${s.name}</span>
+        <span class="bartrack"><span class="barfill" style="width:${Math.max(1.2,s.w/max*100)}%;background:var(${rampFor(s.w)})"></span></span>
+        <span class="amt">${val}</span>
+      </button>` + (open===i && s.c.length ? drillHtml(s) : '');
+  }).join('');
+  c.querySelectorAll('.georow').forEach(b=> b.onclick=()=>{ const i=+b.dataset.i; open = open===i?null:i; drawGeo(); });
+}
+function drillHtml(s){
+  return `<div class="drill"><div class="hd">Strumenti che generano l'esposizione su ${s.name}</div>`
+    + s.c.map(x=>`<div class="dr"><span>${x.n.replace(' (Acc)','')}</span><b>${unit==='pct'? pct(x.v/GEO.total*100,2) : eur(x.v)}</b></div>`).join('')
+    + `</div>`;
+}
+document.getElementById('u-pct').onclick=()=>{unit='pct'; syncU();};
+document.getElementById('u-eur').onclick=()=>{unit='eur'; syncU();};
+function syncU(){
+  document.getElementById('u-pct').setAttribute('aria-pressed', unit==='pct');
+  document.getElementById('u-eur').setAttribute('aria-pressed', unit==='eur');
+  drawDevBar(); drawGeo();
+}
+
+/* ---------- holdings ---------- */
+function drawHold(){
+  const box=document.getElementById('holdbox');
+  const rows=HOLD.slice(0,12);
+  const totH=HOLD.reduce((s,h)=>s+h.v,0);
+  const rest=HOLD.slice(12).reduce((s,h)=>s+h.v,0);
+  const items=[...rows, {n:'Altre '+(HOLD.length-12)+' posizioni', v:rest, other:true}];
+  const W=790, rowH=26, H=items.length*rowH+26, PL=238, PR=96;
+  const max=Math.max(...items.map(i=>i.v));
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMinYMin meet" role="img" aria-label="Valore delle posizioni in portafoglio">`;
+  items.forEach((it,i)=>{
+    const y=i*rowH+14, w=Math.max(2,(it.v/max)*(W-PL-PR));
+    s+=`<text x="${PL-12}" y="${y+12}" text-anchor="end" font-size="11.5" fill="${css(it.other?'--ink-3':'--ink')}" font-family="Instrument Sans, sans-serif">${it.n.length>28?it.n.slice(0,27)+'…':it.n}</text>`;
+    s+=`<rect x="${PL}" y="${y+2}" width="${w}" height="13" rx="3" fill="${css(it.other?'--r2':'--r6')}"/>`;
+    s+=`<text x="${PL+w+9}" y="${y+13}" font-size="11" fill="${css('--ink-2')}">${eur(it.v)} · ${(it.v/totH*100).toFixed(1).replace('.',',')}%</text>`;
+  });
+  s+=`</svg>`;
+  box.innerHTML=s;
+}
+
+/* ---------- notes ---------- */
+const NOTES=[
+ ['flag','Il fai-da-te vale quasi quanto il piano', `Hai versato ${eur(totPac)} col PAC e ${eur(totExt)} con ordini manuali: il ${Math.round(totExt/totInv*100)}% del capitale investito è discrezionale. Non è un problema di per sé, ma significa che il tuo rendimento dipende dal timing quanto dall'automatismo — e il timing non lo controlli.`],
+ ['flag','Gli extra arrivano a raffiche', 'Agosto 2025 (2.729 €), gennaio 2026 (2.003 €) e giugno 2026 (2.515 €) da soli valgono il 45% degli acquisti extra. In mezzo ci sono mesi a zero: dicembre 2025, aprile, maggio e luglio 2026. È il profilo tipico di chi compra quando ha liquidità o quando il mercato scende, non secondo una regola.'],
+ ['ok','La concentrazione, però, è sana', 'Il 77% del portafoglio è nello Scalable MSCI AC World: un solo ETF globale, che è anche il bersaglio della maggior parte degli ordini extra. Il fai-da-te finora ha rinforzato il core, non l\'ha frammentato.'],
+ ['flag','Il sovrappeso USA è del 60%', 'Gli Stati Uniti pesano 23.338 € (60,2%). L\'MSCI ACWI oggi ne ha circa il 63-65%, quindi non sei sopra il mercato: sei allineato. La domanda vera è se questa concentrazione geografica ti va bene, non se sei fuori benchmark.'],
+ ['flag','Gli emergenti li stai comprando quattro volte', 'Xtrackers EM, Amundi EM Swap, iShares Core EM IMI e MSCI India si sovrappongono quasi del tutto, e insieme fanno 3.732 € (9,6%). Quattro prodotti per un\'unica esposizione significa quattro TER e nessun beneficio di diversificazione.'],
+ ['flag','Le code lunghe non muovono niente', 'Malesia (23 €), Frontier (27 €), Ageing Population (111 €), Biotech (108 €): posizioni sotto lo 0,3% ereditate dai vecchi mini-PAC. Non spostano il rendimento, ma sporcano la lettura del portafoglio e ognuna ha il suo costo.']
+];
+document.getElementById('notes').innerHTML = NOTES.map(([k,t,b])=>
+  `<div class="note ${k}"><h3>${t}</h3><p>${b}</p></div>`).join('');
+
+sync(); drawYears(); drawExtra(); syncU(); drawHold();
+window.addEventListener('resize', ()=>{ drawFlow(); drawHold(); });
+if(window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{ drawFlow(); drawHold(); });
+</script>
