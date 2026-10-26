@@ -1,0 +1,502 @@
+<title>Portfolio Metro</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: una colonna di sezioni; la mappa è uno schema verticale "a linee" con pannello di dettaglio accanto (sotto, su mobile).
+   Tema volutamente unico e scuro, come una mappa notturna della metropolitana. */
+:root{
+  color-scheme:dark;
+  --bg:#0D1015; --surface:#151A21; --surface-2:#1B212A; --line:#28303B; --line-strong:#3A4452;
+  --ink:#EEF1F5; --ink-2:#AEB7C4; --ink-3:#7C8696;
+  --station:#F4F2EC; --accent:#FFD43B; --track:#232A34;
+  --display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding-block:0 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+p{margin:0}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-2)}
+.small{font-size:13px;line-height:1.5}
+.xs{font-size:12px;line-height:1.45}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* masthead */
+header.top{padding-block:40px 28px;display:grid;gap:14px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:12px}
+.roundel{width:34px;height:34px;flex:none}
+h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-.035em;line-height:1}
+.subtitle{font-family:var(--display);font-size:clamp(18px,2.4vw,24px);font-weight:500;color:var(--ink-2);letter-spacing:-.01em}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--ink-3)}
+.meta span b{color:var(--ink-2);font-weight:500}
+
+section{padding-block:44px 8px}
+.sec-head{display:grid;gap:8px;margin-bottom:22px;max-width:760px}
+.sec-head h2{font-size:clamp(22px,3vw,28px);font-weight:700;letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+.stop-no{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--station);color:var(--bg);font-family:var(--mono);font-size:13px;font-weight:600;flex:none}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 18px 16px;display:grid;gap:6px;align-content:start}
+.kpi .v{font-family:var(--display);font-size:clamp(30px,4vw,42px);font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.kpi .v small{font-size:.5em;font-weight:600;color:var(--ink-2);letter-spacing:0}
+.kpi .l{font-weight:600;font-size:14px}
+.kpi .d{color:var(--ink-2);font-size:12.5px;line-height:1.45}
+.flag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);border-radius:999px;padding:2px 8px;width:max-content}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* map */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:999px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--station);color:var(--bg)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px 4px 4px;cursor:pointer;font-size:12.5px;color:var(--ink-2);transition:border-color .15s,background .15s}
+.chip:hover{border-color:var(--line-strong)}
+@media (max-width:600px){.chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}.chip{flex:none}}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--surface-2);color:var(--ink)}
+.chip .code{font-family:var(--mono);font-weight:600;font-size:11px;color:#0D1015;border-radius:999px;padding:2px 7px;letter-spacing:.02em}
+.chip .code.dash{background:transparent!important;color:var(--ink);border:1.5px dashed var(--ink-2)}
+.chip .w{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+.map-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+@media (max-width:900px){.map-grid{grid-template-columns:minmax(0,1fr)}}
+.map-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 10px 10px;min-width:0}
+.map-scroll{max-height:880px;overflow:auto;overscroll-behavior:contain}
+svg text{font-family:var(--body)}
+.lane{transition:opacity .2s}
+.station{transition:opacity .2s}
+#map.sel-etf .lane:not(.on){opacity:.14}
+#map.sel-etf .station:not(.on){opacity:.22}
+#map.sel-co .lane:not(.on){opacity:.14}
+#map.sel-co .station:not(.on){opacity:.3}
+.row-hit{cursor:pointer}
+.row-hit:hover + g .st-name, .station:hover .st-name{text-decoration:underline}
+.lane-hit{cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;padding:12px 8px 4px;border-top:1px solid var(--line);margin-top:8px;color:var(--ink-2);font-size:12.5px}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:900px){.panel{position:static}}
+.panel h3{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.panel .big{font-family:var(--display);font-size:40px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.stack{display:flex;height:14px;border-radius:7px;overflow:hidden;gap:2px;background:var(--bg)}
+.stack i{display:block;height:100%}
+.src-list{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.src-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.src-list li:first-child{border-top:0}
+.sw{width:22px;height:6px;border-radius:3px;display:inline-block}
+.sw.dash{background:repeating-linear-gradient(90deg,var(--ink) 0 4px,transparent 4px 7px)!important}
+.src-list .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-list .p{font-family:var(--mono);font-size:12.5px;text-align:right}
+.src-list .s{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right;min-width:42px}
+.note{font-size:12px;color:var(--ink-3);line-height:1.5;border-top:1px dashed var(--line);padding-top:10px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;color:var(--ink-2)}
+.tag.hot{border-color:var(--accent);color:var(--ink)}
+
+/* matrix */
+.mx-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+@media (max-width:980px){.mx-wrap{grid-template-columns:minmax(0,1fr)}}
+.mx-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.mx-scroll{overflow-x:auto}
+table.mx{border-collapse:separate;border-spacing:3px;font-family:var(--mono);font-size:11.5px}
+table.mx th{font-weight:600;color:var(--ink-2);padding:2px 4px;white-space:nowrap}
+table.mx thead th{height:64px;vertical-align:bottom}
+table.mx thead th span{display:inline-block;transform:rotate(-55deg);transform-origin:left bottom;translate:10px 0;width:20px;white-space:nowrap}
+table.mx tbody th{text-align:right;display:flex;align-items:center;justify-content:flex-end;gap:6px;height:36px}
+table.mx td{width:40px;height:36px;min-width:40px;text-align:center;border-radius:6px;cursor:pointer;position:relative;font-variant-numeric:tabular-nums}
+table.mx td.diag{background:transparent;cursor:default;color:var(--ink-3)}
+table.mx td.sel{outline:2px solid var(--accent);outline-offset:1px}
+table.mx td.same::after{content:"";position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.ramp{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);margin-top:10px;flex-wrap:wrap}
+.ramp .bar{width:140px;height:8px;border-radius:4px}
+.explain{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:12px}
+.explain .big{font-family:var(--display);font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1}
+
+/* concentration */
+.bars{display:grid;gap:8px}
+.bar-row{display:grid;grid-template-columns:minmax(110px,190px) minmax(0,1fr) 112px;gap:12px;align-items:center;font-size:13.5px}
+.bar-row .lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row .track{height:14px;background:var(--bg);border-radius:4px;display:flex;gap:2px;overflow:hidden}
+.bar-row .track i{display:block;height:100%}
+.bar-row .track i:last-child{border-radius:0 4px 4px 0}
+.bar-row .val{font-family:var(--mono);font-size:12.5px;text-align:right;white-space:nowrap}
+.bar-row .val small{color:var(--ink-3)}
+.bar-row.unk .track i{background:repeating-linear-gradient(135deg,var(--line-strong) 0 3px,transparent 3px 7px)!important}
+.bar-row.unk .lbl{color:var(--ink-3);font-style:italic}
+@media (max-width:560px){.bar-row{grid-template-columns:minmax(0,1fr) 96px;row-gap:4px}.bar-row .track{grid-column:1 / -1;grid-row:2}}
+.conc-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:16px}
+
+/* observations */
+.obs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:900px){.obs{grid-template-columns:minmax(0,1fr)}}
+.ob{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:10px;align-content:start}
+.ob .fig{font-family:var(--display);font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.ob h3{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.ob p{color:var(--ink-2);font-size:14px}
+
+/* sources */
+details.src{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:4px 18px}
+details.src summary{cursor:pointer;padding:14px 0;font-weight:600}
+.src-scroll{overflow-x:auto;padding-bottom:14px}
+table.st{border-collapse:collapse;font-size:12.5px;min-width:820px;width:100%}
+table.st th,table.st td{text-align:left;padding:8px 10px;border-top:1px solid var(--line);vertical-align:top}
+table.st th{color:var(--ink-3);font-weight:500;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+table.st td.r{text-align:right;font-family:var(--mono)}
+.badge{font-family:var(--mono);font-size:10.5px;border-radius:4px;padding:1px 6px;border:1px solid var(--line-strong);color:var(--ink-2);white-space:nowrap}
+.badge.fondo{border-color:#3E8EF7;color:#9cc4ff}
+.badge.proxy{border-color:var(--accent);color:var(--accent)}
+.method{display:grid;gap:10px;color:var(--ink-2);font-size:13.5px;max-width:820px;padding-bottom:16px}
+footer{margin-top:40px;color:var(--ink-3);font-size:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <div class="brand">
+    <svg class="roundel" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="13" fill="none" stroke="#E5484D" stroke-width="6"/><rect x="1" y="13" width="32" height="8" rx="2" fill="#3E8EF7"/></svg>
+    <span class="eyebrow">Analisi delle sovrapposizioni · Scalable Capital</span>
+  </div>
+  <h1>Portfolio Metro</h1>
+  <p class="subtitle">Tanti ETF. Quante strade diverse?</p>
+  <div class="meta xs">
+    <span>Portafoglio: <b id="m-total"></b></span>
+    <span>Quotazioni: <b id="m-asof"></b></span>
+    <span>Composizioni: <b>31/08 – fine ott. 2026, variabili per fondo</b></span>
+  </div>
+</header>
+
+<section id="glance">
+  <div class="sec-head">
+    <h2><span class="stop-no">1</span>Il portafoglio, a colpo d'occhio</h2>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</section>
+
+<section id="mappa">
+  <div class="sec-head">
+    <h2><span class="stop-no">2</span>La mappa delle sovrapposizioni</h2>
+    <p class="muted">Ogni ETF è una linea, ogni azienda una fermata. Quando più linee si fermano nella stessa azienda, la fermata diventa un interscambio. Più è grande la fermata, più pesa quell'azienda sul tuo portafoglio. Tocca una linea o una fermata per i dettagli.</p>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Fermate da mostrare">
+      <button type="button" id="v-shared" aria-pressed="true">Interscambi</button>
+      <button type="button" id="v-all" aria-pressed="false">Tutte le fermate</button>
+    </div>
+    <span class="xs muted" id="view-note"></span>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Linee (ETF)"></div>
+  <div class="map-grid">
+    <div class="map-card">
+      <div class="map-scroll"><svg id="map" role="img" aria-label="Mappa metropolitana delle partecipazioni condivise"></svg></div>
+      <div class="legend">
+        <span><svg width="30" height="10"><line x1="2" y1="5" x2="28" y2="5" stroke="#3E8EF7" stroke-width="5" stroke-linecap="round"/></svg>Linea = ETF</span>
+        <span><svg width="30" height="10"><line x1="2" y1="5" x2="28" y2="5" stroke="#E9ECF1" stroke-width="3" stroke-dasharray="4 3"/></svg>Azioni detenute direttamente</span>
+        <span><svg width="16" height="16"><circle cx="8" cy="8" r="6" fill="#F4F2EC" stroke="#0D1015" stroke-width="2"/><circle cx="8" cy="8" r="3" fill="#3E8EF7"/></svg>Fermata = azienda</span>
+        <span><svg width="44" height="16"><rect x="1" y="2" width="42" height="12" rx="6" fill="#F4F2EC" stroke="#0D1015" stroke-width="2"/><circle cx="8" cy="8" r="3.2" fill="#3E8EF7"/><circle cx="22" cy="8" r="3.2" fill="#E5484D"/><circle cx="36" cy="8" r="3.2" fill="#F59E0B"/></svg>Interscambio: pallini = linee che si fermano</span>
+        <span><svg width="40" height="22"><rect x="1" y="7" width="12" height="8" rx="4" fill="#F4F2EC"/><rect x="18" y="2" width="20" height="18" rx="9" fill="#F4F2EC"/></svg>Spessore = esposizione totale</span>
+      </div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+</section>
+
+<section id="somiglianza">
+  <div class="sec-head">
+    <h2><span class="stop-no">3</span>Quanto si somigliano i miei ETF?</h2>
+    <p class="muted">Per ogni coppia di ETF sommiamo, azienda per azienda, il più piccolo dei due pesi. Il risultato dice quanta parte di un fondo è investita nelle stesse aziende e nella stessa misura dell'altro. Poiché per molti fondi conosciamo solo le prime partecipazioni, ogni valore è un <b>minimo</b>: la sovrapposizione reale può solo essere più alta.</p>
+  </div>
+  <div class="mx-wrap">
+    <div class="mx-card">
+      <div class="mx-scroll"><table class="mx" id="mx"></table></div>
+      <div class="ramp"><span>0%</span><span class="bar" id="ramp-bar"></span><span>40%+</span><span style="display:inline-flex;align-items:center;gap:6px;margin-left:12px"><i style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></i>stesso indice di riferimento</span></div>
+    </div>
+    <div class="explain" id="mx-explain"></div>
+  </div>
+</section>
+
+<section id="concentrazione">
+  <div class="sec-head">
+    <h2><span class="stop-no">4</span>Dove si concentra davvero il portafoglio?</h2>
+    <p class="muted">Esposizioni sommate attraverso tutti gli strumenti, in % del valore totale. La parte che le fonti non permettono di attribuire resta visibile come "non attribuito": non è zero, è sconosciuta.</p>
+  </div>
+  <div class="conc-card">
+    <div class="seg" role="group" aria-label="Vista concentrazione">
+      <button type="button" data-v="co" aria-pressed="true">Aziende</button>
+      <button type="button" data-v="se" aria-pressed="false">Settori</button>
+      <button type="button" data-v="mk" aria-pressed="false">Mercati</button>
+    </div>
+    <div class="bars" id="bars"></div>
+    <p class="note" id="bars-note"></p>
+  </div>
+</section>
+
+<section id="emerge">
+  <div class="sec-head">
+    <h2><span class="stop-no">5</span>Tre cose che emergono</h2>
+  </div>
+  <div class="obs" id="obs"></div>
+</section>
+
+<section id="fonti">
+  <details class="src" open>
+    <summary>Fonti, date e copertura dei dati</summary>
+    <div class="method">
+      <p><b>Portafoglio.</b> Posizioni e quotazioni dallo Scalable Capital MCP (<span id="m-asof2"></span>). Valore = quantità × prezzo medio. Liquidità esclusa.</p>
+      <p><b>Esposizione indiretta</b> = peso dell'ETF nel portafoglio × peso dell'azienda nell'ETF. Le azioni detenute direttamente si sommano una sola volta. Le classi A e C di Alphabet sono unite in un'unica azienda.</p>
+      <p><b>Composizioni.</b> I siti degli emittenti (iShares, DWS, Amundi, Vanguard) non erano raggiungibili da questo ambiente: dove possibile i pesi vengono comunque dalle pagine dell'emittente o dell'indice (DWS, MSCI) riportate dai risultati di ricerca; altrimenti da aggregatori indicati per nome. Per quasi tutti i fondi conosciamo solo le prime 3–10 partecipazioni: l'analisi è parziale e sovrapposizioni ed esposizioni sono valori minimi. Gli ETF a replica sintetica sono rappresentati con i pesi dell'indice che replicano ("proxy").</p>
+    </div>
+    <div class="src-scroll"><table class="st" id="src-table"></table></div>
+  </details>
+  <footer>Analisi descrittiva, non una raccomandazione d'investimento. Dati con date diverse per fondo: le somme sono indicative.</footer>
+</section>
+</div>
+
+<script>
+const D = {"total": 40281.58, "asof": "26/10/2026 16:46 UTC", "instruments": [{"isin": "LU2903252349", "name": "Scalable MSCI AC World Xtrackers", "code": "ACWI", "kind": "etf", "value": 31464.84, "w": 78.11222672068058, "src": "Indice MSCI ACWI – factsheet MSCI (prime 10 componenti)", "date": "30/09/2026", "basis": "indice", "listed": 10, "n": 2414, "note": "Fondo a replica ibrida: azioni Europa/Giappone detenute direttamente, USA ed emergenti tramite swap o altri ETF. Si usano i pesi dell'indice replicato.", "holdings": [["NVIDIA", 5.11], ["Apple", 4.76], ["Microsoft", 3.52], ["Amazon", 2.35], ["Alphabet", 3.52], ["TSMC", 1.87], ["Meta Platforms", 1.55], ["Broadcom", 1.55], ["Micron Technology", 1.17]], "mk_src": "MSCI ACWI factsheet, 30/09/2026"}, {"isin": "IE00BTJRMP35", "name": "Xtrackers MSCI Emerging Markets", "code": "XEM", "kind": "etf", "value": 1882.8, "w": 4.674098425387519, "src": "DWS (emittente), pagina prodotto", "date": "22/10/2026", "basis": "fondo", "listed": 5, "n": 1173, "holdings": [["TSMC", 15.79], ["Samsung Electronics", 6.64], ["SK hynix", 4.47], ["Tencent", 2.63], ["Alibaba", 1.83]], "mk_src": "MSCI Emerging Markets factsheet, 30/09/2026"}, {"isin": "IE00BFMXXD54", "name": "Vanguard S&P 500", "code": "VUSA", "kind": "etf", "value": 1858.53, "w": 4.613858571435859, "src": "justETF, scheda ISIN IE00BFMXXD54 (prime 10)", "date": "31/08/2026", "basis": "fondo", "listed": 10, "n": 505, "holdings": [["NVIDIA", 8.08], ["Apple", 7.03], ["Microsoft", 5.69], ["Amazon", 3.84], ["Alphabet", 5.4], ["Broadcom", 2.65], ["Meta Platforms", 1.9], ["Micron Technology", 1.63], ["Tesla", 1.57]], "mk_src": "Vanguard UK (VUSA), 30/09/2026"}, {"isin": "IE00BP3QZ825", "name": "iShares Edge MSCI World Momentum", "code": "MOM", "kind": "etf", "value": 1287.45, "w": 3.1961385107560276, "src": "StockAnalysis, quotazione LSE IWMO (prime 10)", "date": "01/10/2026", "basis": "fondo", "listed": 10, "n": 352, "holdings": [["Micron Technology", 5.66], ["AMD", 4.61], ["Intel", 3.06], ["ASML", 2.65], ["Alphabet", 4.71], ["Johnson & Johnson", 2.34], ["ExxonMobil", 2.27], ["Lam Research", 2.07], ["Applied Materials", 2.05]], "mk_src": null}, {"isin": "LU1681045370", "name": "Amundi MSCI Emerging Markets Swap", "code": "AEM", "kind": "etf", "value": 681.82, "w": 1.692635314346037, "src": "Proxy: pesi indice MSCI EM dal fondo fisico Xtrackers (DWS)", "date": "22/10/2026", "basis": "proxy", "listed": 5, "n": null, "note": "ETF a replica sintetica (swap): l'esposizione economica è quella dell'indice MSCI Emerging Markets, non del paniere detenuto.", "holdings": [["TSMC", 15.79], ["Samsung Electronics", 6.64], ["SK hynix", 4.47], ["Tencent", 2.63], ["Alibaba", 1.83]], "mk_src": "MSCI Emerging Markets factsheet, 30/09/2026"}, {"isin": "IE00B5BMR087", "name": "iShares Core S&P 500", "code": "CSPX", "kind": "etf", "value": 477.72, "w": 1.1859571270821543, "src": "Proxy: indice S&P 500 (pesi del fondo Vanguard, justETF)", "date": "31/08/2026", "basis": "proxy", "listed": 10, "n": 503, "holdings": [["NVIDIA", 8.08], ["Apple", 7.03], ["Microsoft", 5.69], ["Amazon", 3.84], ["Alphabet", 5.4], ["Broadcom", 2.65], ["Meta Platforms", 1.9], ["Micron Technology", 1.63], ["Tesla", 1.57]], "mk_src": "Vanguard UK (VUSA), 30/09/2026 – proxy indice"}, {"isin": "IE00BKM4GZ66", "name": "iShares Core MSCI EM IMI", "code": "EIMI", "kind": "etf", "value": 375.87, "w": 0.9331120641314442, "src": "Indice MSCI EM IMI – pagina indice MSCI", "date": "30/09/2026", "basis": "indice", "listed": 5, "n": null, "holdings": [["TSMC", 13.76], ["Samsung Electronics", 6.65], ["SK hynix", 5.19], ["Tencent", 2.42], ["Alibaba", 1.63]], "mk_src": null}, {"isin": "IE00BGV5VN51", "name": "Xtrackers AI & Big Data", "code": "XAI", "kind": "etf", "value": 308.88, "w": 0.7667931777652588, "src": "DWS (emittente), pagina prodotto", "date": "22/10/2026", "basis": "fondo", "listed": 10, "n": 127, "holdings": [["Microsoft", 6.166], ["Apple", 5.312], ["Meta Platforms", 5.084], ["Walmart", 4.72], ["NVIDIA", 4.681], ["Amazon", 4.637], ["Palantir", 4.018], ["Alphabet", 4.004], ["AMD", 3.859], ["Cisco", 3.533]], "mk_src": null}, {"isin": "IE00B4ND3602", "name": "iShares Physical Gold ETC", "code": "GOLD", "kind": "etc", "value": 279.02, "w": 0.6926739709513318, "src": "ETC su oro fisico: nessuna azienda sottostante", "date": "—", "basis": "nessuno", "listed": 0, "n": null, "holdings": [], "mk_src": "ETC su oro fisico"}, {"isin": "IE00BYZK4552", "name": "iShares Automation & Robotics", "code": "RBOT", "kind": "etf", "value": 158.21, "w": 0.3927559146075183, "src": "Parqet (prime 10)", "date": "16/10/2026", "basis": "fondo", "listed": 10, "n": 158, "holdings": [["Advantest", 3.72], ["ServiceNow", 3.71], ["Snowflake", 3.58], ["SAP", 3.51], ["Emerson Electric", 3.17], ["AMD", 3.11], ["Keyence", 3.07], ["NVIDIA", 2.88], ["Intuitive Surgical", 2.8], ["Siemens", 2.78]], "mk_src": null}, {"isin": "IE00BYXG2H39", "name": "iShares Nasdaq US Biotechnology", "code": "BTEC", "kind": "etf", "value": 110.19, "w": 0.2735570757689601, "src": "justETF (prime 5 delle 10 pubblicate)", "date": "ott. 2026", "basis": "fondo", "listed": 5, "n": 250, "holdings": [["Amgen", 8.66], ["Vertex Pharmaceuticals", 8.26], ["Gilead Sciences", 7.39], ["Regeneron", 5.33], ["Moderna", 3.6]], "mk_src": null}, {"isin": "IE00BYZK4669", "name": "iShares Ageing Population", "code": "AGED", "kind": "etf", "value": 110.0, "w": 0.2730690871239952, "src": "TipRanks (prime 3)", "date": "fine ott. 2026", "basis": "fondo", "listed": 3, "n": 348, "holdings": [["Tenet Healthcare", 0.76], ["Halozyme", 0.75], ["Genmab", 0.7]], "mk_src": null}, {"isin": "IE00BZCQB185", "name": "iShares MSCI India", "code": "INDIA", "kind": "etf", "value": 109.73, "w": 0.27241229171844, "src": "StockAnalysis (prime 5)", "date": "28/09/2026", "basis": "fondo", "listed": 5, "n": 165, "holdings": [["HDFC Bank", 6.46], ["ICICI Bank", 5.45], ["Reliance Industries", 5.44], ["Bharti Airtel", 3.93], ["Infosys", 2.41]], "mk_src": "Mandato del fondo"}, {"isin": "IE00B4L5Y983", "name": "iShares Core MSCI World", "code": "SWDA", "kind": "etf", "value": 70.25, "w": 0.17440543536834768, "src": "Morningstar (prime 3 con peso puntuale)", "date": "02/10/2026", "basis": "fondo", "listed": 3, "n": 1249, "holdings": [["NVIDIA", 5.9], ["Apple", 5.38], ["Microsoft", 4.01]], "mk_src": "MSCI World factsheet / justETF, 30/09/2026"}, {"isin": "IE00B3ZW0K18", "name": "iShares S&P 500 EUR Hedged", "code": "SPXH", "kind": "etf", "value": 48.42, "w": 0.1202074333406973, "src": "Proxy: indice S&P 500 (pesi del fondo Vanguard, justETF)", "date": "31/08/2026", "basis": "proxy", "listed": 10, "n": 503, "note": "Classe con copertura valutaria EUR: stesse aziende dell'S&P 500.", "holdings": [["NVIDIA", 8.08], ["Apple", 7.03], ["Microsoft", 5.69], ["Amazon", 3.84], ["Alphabet", 5.4], ["Broadcom", 2.65], ["Meta Platforms", 1.9], ["Micron Technology", 1.63], ["Tesla", 1.57]], "mk_src": "Vanguard UK (VUSA), 30/09/2026 – proxy indice"}, {"isin": "LU0328476410", "name": "Xtrackers S&P Select Frontier Swap", "code": "FRONT", "kind": "etf", "value": 25.59, "w": 0.06352873152241303, "src": "Non analizzato: replica sintetica, fonti sul paniere discordanti", "date": "—", "basis": "nessuno", "listed": 0, "n": 40, "holdings": [], "mk_src": null}, {"isin": "LU0514694370", "name": "Xtrackers MSCI Malaysia", "code": "MYS", "kind": "etf", "value": 22.66, "w": 0.05625169520093253, "src": "StockAnalysis (solo prima posizione)", "date": "31/08/2026", "basis": "fondo", "listed": 1, "n": null, "holdings": [["Public Bank", 15.63]], "mk_src": "Mandato del fondo"}], "stocks": [{"isin": "NL0011585146", "name": "Ferrari", "code": "RACE", "kind": "stock", "value": 358.87, "w": 0.8909113651937908, "company": "Ferrari"}, {"isin": "US5951121038", "name": "Micron Technology", "code": "MU", "kind": "stock", "value": 282.97, "w": 0.7024779451983908, "company": "Micron Technology"}, {"isin": "US70450Y1038", "name": "PayPal Holdings", "code": "PYPL", "kind": "stock", "value": 148.79, "w": 0.3693644082244887, "company": "PayPal"}, {"isin": "US84615Q1031", "name": "SpaceX", "code": "SPCX", "kind": "stock", "value": 132.64, "w": 0.3292820425309463, "company": "SpaceX"}, {"isin": "IT0004764699", "name": "Brunello Cucinelli", "code": "BC", "kind": "stock", "value": 86.32, "w": 0.21428269166487127, "company": "Brunello Cucinelli"}], "companies": [{"name": "NVIDIA", "sector": "Tecnologia", "country": "Stati Uniti", "total": 4.527367534159582, "parts": {"ACWI": 3.991534785426778, "VUSA": 0.3727997725720174, "CSPX": 0.09582533586823808, "XAI": 0.035893588651191764, "RBOT": 0.011311370340696528, "SWDA": 0.010289920686732514, "SPXH": 0.009712760613928343}, "eur": 1823.6950460925614}, {"name": "Apple", "sector": "Tecnologia", "country": "Stati Uniti", "total": 4.18443468409977, "parts": {"ACWI": 3.718141991904395, "VUSA": 0.3243542575719409, "CSPX": 0.08337278603387546, "XAI": 0.040732053602890554, "SWDA": 0.009383012422817106, "SPXH": 0.008450582563851021}, "eur": 1685.556285526356}, {"name": "Alphabet", "sector": "Servizi di comunicazione", "country": "Stati Uniti", "total": 3.250472152382657, "parts": {"ACWI": 2.749550380567957, "VUSA": 0.24914836285753642, "MOM": 0.15053812385660892, "CSPX": 0.06404168486243633, "XAI": 0.030702398837720957, "SPXH": 0.0064912014003976545}, "eur": 1309.3414477697074}, {"name": "Microsoft", "sector": "Tecnologia", "country": "Stati Uniti", "total": 3.140673822069994, "parts": {"ACWI": 2.749550380567957, "VUSA": 0.2625285527147004, "CSPX": 0.06748096053097458, "XAI": 0.047280467341005855, "SWDA": 0.006993657958270742, "SPXH": 0.006839802957085677}, "eur": 1265.1129486364669}, {"name": "TSMC", "sector": "Tecnologia", "country": "Taiwan", "total": 2.594402117205142, "parts": {"ACWI": 1.460698639676727, "XEM": 0.7380401413686891, "AEM": 0.26726711613523924, "EIMI": 0.12839622002448672}, "eur": 1045.0660903980183}, {"name": "Amazon", "sector": "Consumi discrezionali", "country": "Stati Uniti", "total": 2.0985224158523432, "parts": {"ACWI": 1.8356373279359937, "VUSA": 0.177172169143137, "CSPX": 0.04554075367995472, "XAI": 0.035556199652975046, "SPXH": 0.004615965440282777}, "eur": 845.3179259312184}, {"name": "Micron Technology", "sector": "Tecnologia", "country": "Stati Uniti", "total": 1.8937888145884416, "parts": {"ACWI": 0.9139130526319628, "VUSA": 0.07520589471440449, "MOM": 0.18090143970879116, "CSPX": 0.019331101171439113, "SPXH": 0.001959381163453366, "DIRETTO": 0.7024779451983908}, "eur": 762.8480023881154}, {"name": "Broadcom", "sector": "Tecnologia", "country": "Stati Uniti", "total": 1.367620127164805, "parts": {"ACWI": 1.210739514170549, "VUSA": 0.12226725214305026, "CSPX": 0.03142786386767708, "SPXH": 0.0031854969835284786}, "eur": 550.8989566295327}, {"name": "Meta Platforms", "sector": "Servizi di comunicazione", "country": "Stati Uniti", "total": 1.3622037188334504, "parts": {"ACWI": 1.210739514170549, "VUSA": 0.08766331285728132, "CSPX": 0.02253318541456093, "XAI": 0.038983765157585754, "SPXH": 0.002283941233473249}, "eur": 548.7171419288317}, {"name": "Ferrari", "sector": "Consumi discrezionali", "country": "Italia", "total": 0.8909113651937908, "parts": {"DIRETTO": 0.8909113651937908}, "eur": 358.87314889999993}, {"name": "Samsung Electronics", "sector": "Tecnologia", "country": "Corea del Sud", "total": 0.4848030725830491, "parts": {"XEM": 0.3103601354457312, "AEM": 0.11239098487257686, "EIMI": 0.06205195226474104}, "eur": 195.28632370340156}, {"name": "PayPal", "sector": "Finanza", "country": "Stati Uniti", "total": 0.3693644082244887, "parts": {"DIRETTO": 0.3693644082244887}, "eur": 148.78580906}, {"name": "SK hynix", "sector": "Tecnologia", "country": "Corea del Sud", "total": 0.3330215142945119, "parts": {"XEM": 0.2089321996148221, "AEM": 0.07566079855126785, "EIMI": 0.04842851612842196}, "eur": 134.1463182034068}, {"name": "SpaceX", "sector": "Industria", "country": "Stati Uniti", "total": 0.3292820425309463, "parts": {"DIRETTO": 0.3292820425309463}, "eur": 132.64}, {"name": "Brunello Cucinelli", "sector": "Consumi discrezionali", "country": "Italia", "total": 0.21428269166487127, "parts": {"DIRETTO": 0.21428269166487127}, "eur": 86.31644775999999}, {"name": "Tencent", "sector": "Servizi di comunicazione", "country": "Cina", "total": 0.19002640930697348, "parts": {"XEM": 0.12292878858769175, "AEM": 0.044516308767300776, "EIMI": 0.022581311951980952}, "eur": 76.54563466851721}, {"name": "AMD", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.18914724302010805, "parts": {"MOM": 0.14734198534585288, "XAI": 0.029590548729961336, "RBOT": 0.01221470894429382}, "eur": 76.19149262240525}, {"name": "Alibaba", "sector": "Consumi discrezionali", "country": "Cina", "total": 0.13172095408246662, "parts": {"XEM": 0.0855360011845916, "AEM": 0.03097522625253248, "EIMI": 0.015209726645342541}, "eur": 53.05927774016521}, {"name": "Intel", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.09780183842913445, "parts": {"MOM": 0.09780183842913445}, "eur": 39.396123}, {"name": "Tesla", "sector": "Consumi discrezionali", "country": "Stati Uniti", "total": 0.09294436317018176, "parts": {"VUSA": 0.072437579571543, "CSPX": 0.018619526895189822, "SPXH": 0.0018872567034489479}, "eur": 37.43945535607}, {"name": "ASML", "sector": "Tecnologia", "country": "Paesi Bassi", "total": 0.08469767053503473, "parts": {"MOM": 0.08469767053503473}, "eur": 34.1175575}, {"name": "Johnson & Johnson", "sector": "Sanità", "country": "Stati Uniti", "total": 0.07478964115169104, "parts": {"MOM": 0.07478964115169104}, "eur": 30.126446999999995}, {"name": "ExxonMobil", "sector": "Energia", "country": "Stati Uniti", "total": 0.07255234419416183, "parts": {"MOM": 0.07255234419416183}, "eur": 29.225228500000004}, {"name": "Lam Research", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.06616006717264977, "parts": {"MOM": 0.06616006717264977}, "eur": 26.650318499999997}, {"name": "Applied Materials", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.06552083947049855, "parts": {"MOM": 0.06552083947049855}, "eur": 26.392827499999992}, {"name": "Walmart", "sector": "Beni di prima necessità", "country": "Stati Uniti", "total": 0.036192637990520214, "parts": {"XAI": 0.036192637990520214}, "eur": 14.578965394419999}, {"name": "Palantir", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.030809749882608095, "parts": {"XAI": 0.030809749882608095}, "eur": 12.410653168385497}, {"name": "Cisco", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.027090802970446592, "parts": {"XAI": 0.027090802970446592}, "eur": 10.91260269883175}, {"name": "Amgen", "sector": "Sanità", "country": "Stati Uniti", "total": 0.023690042761591944, "parts": {"BTEC": 0.023690042761591944}, "eur": 9.542722851648502}, {"name": "Vertex Pharmaceuticals", "sector": "Sanità", "country": "Stati Uniti", "total": 0.022595814458516106, "parts": {"BTEC": 0.022595814458516106}, "eur": 9.101950433558503}, {"name": "Gilead Sciences", "sector": "Sanità", "country": "Stati Uniti", "total": 0.02021586789932615, "parts": {"BTEC": 0.02021586789932615}, "eur": 8.143270424212751}, {"name": "HDFC Bank", "sector": "Finanza", "country": "India", "total": 0.017597834045011224, "parts": {"INDIA": 0.017597834045011224}, "eur": 7.0886850973992}, {"name": "ICICI Bank", "sector": "Finanza", "country": "India", "total": 0.014846469898654981, "parts": {"INDIA": 0.014846469898654981}, "eur": 5.980392226134}, {"name": "Reliance Industries", "sector": "Energia", "country": "India", "total": 0.014819228669483138, "parts": {"INDIA": 0.014819228669483138}, "eur": 5.9694190293888}, {"name": "Advantest", "sector": "Tecnologia", "country": "Giappone", "total": 0.014610520023399682, "parts": {"RBOT": 0.014610520023399682}, "eur": 5.8853478951}, {"name": "Regeneron", "sector": "Sanità", "country": "Stati Uniti", "total": 0.014580592138485574, "parts": {"BTEC": 0.014580592138485574}, "eur": 5.873292471049251}, {"name": "ServiceNow", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.014571244431938928, "parts": {"RBOT": 0.014571244431938928}, "eur": 5.869527067424999}, {"name": "Snowflake", "sector": "Tecnologia", "country": "Stati Uniti", "total": 0.014060661742949154, "parts": {"RBOT": 0.014060661742949154}, "eur": 5.663856307649999}, {"name": "SAP", "sector": "Tecnologia", "country": "Germania", "total": 0.013785732602723892, "parts": {"RBOT": 0.013785732602723892}, "eur": 5.553110513925}, {"name": "Emerson Electric", "sector": "Industria", "country": "Stati Uniti", "total": 0.01245036249305833, "parts": {"RBOT": 0.01245036249305833}, "eur": 5.015202372974999}, {"name": "Keyence", "sector": "Tecnologia", "country": "Giappone", "total": 0.01205760657845081, "parts": {"RBOT": 0.01205760657845081}, "eur": 4.856994096224999}, {"name": "Intuitive Surgical", "sector": "Sanità", "country": "Stati Uniti", "total": 0.01099716560901051, "parts": {"RBOT": 0.01099716560901051}, "eur": 4.429831748999999}, {"name": "Siemens", "sector": "Industria", "country": "Germania", "total": 0.010918614426089008, "parts": {"RBOT": 0.010918614426089008}, "eur": 4.398190093649999}, {"name": "Bharti Airtel", "sector": "Servizi di comunicazione", "country": "India", "total": 0.010705803064534693, "parts": {"INDIA": 0.010705803064534693}, "eur": 4.3124663208636}, {"name": "Moderna", "sector": "Sanità", "country": "Stati Uniti", "total": 0.009848054727682564, "parts": {"BTEC": 0.009848054727682564}, "eur": 3.9669517628100013}, {"name": "Public Bank", "sector": "Finanza", "country": "Malesia", "total": 0.008792139959905755, "parts": {"MYS": 0.008792139959905755}, "eur": 3.5416126410000004}, {"name": "Infosys", "sector": "Tecnologia", "country": "India", "total": 0.006565136230414405, "parts": {"INDIA": 0.006565136230414405}, "eur": 2.6445404155932}, {"name": "Tenet Healthcare", "sector": "Sanità", "country": "Stati Uniti", "total": 0.0020753250621423636, "parts": {"AGED": 0.0020753250621423636}, "eur": 0.8359736659999999}, {"name": "Halozyme", "sector": "Sanità", "country": "Stati Uniti", "total": 0.002048018153429964, "parts": {"AGED": 0.002048018153429964}, "eur": 0.8249740124999999}, {"name": "Genmab", "sector": "Sanità", "country": "Danimarca", "total": 0.0019114836098679663, "parts": {"AGED": 0.0019114836098679663}, "eur": 0.7699757449999999}], "overlap": {"ACWI|XEM": {"v": 1.87, "common": ["TSMC"]}, "ACWI|VUSA": {"v": 23.53, "common": ["NVIDIA", "Apple", "Alphabet", "Microsoft", "Amazon", "Meta Platforms", "Broadcom", "Micron Technology"]}, "ACWI|MOM": {"v": 4.6899999999999995, "common": ["Alphabet", "Micron Technology"]}, "ACWI|AEM": {"v": 1.87, "common": ["TSMC"]}, "ACWI|CSPX": {"v": 23.53, "common": ["NVIDIA", "Apple", "Alphabet", "Microsoft", "Amazon", "Meta Platforms", "Broadcom", "Micron Technology"]}, "ACWI|EIMI": {"v": 1.87, "common": ["TSMC"]}, "ACWI|XAI": {"v": 20.381, "common": ["Apple", "NVIDIA", "Alphabet", "Microsoft", "Amazon", "Meta Platforms"]}, "ACWI|RBOT": {"v": 2.88, "common": ["NVIDIA"]}, "ACWI|BTEC": {"v": 0, "common": []}, "ACWI|AGED": {"v": 0, "common": []}, "ACWI|INDIA": {"v": 0, "common": []}, "ACWI|SWDA": {"v": 13.39, "common": ["NVIDIA", "Apple", "Microsoft"]}, "ACWI|SPXH": {"v": 23.53, "common": ["NVIDIA", "Apple", "Alphabet", "Microsoft", "Amazon", "Meta Platforms", "Broadcom", "Micron Technology"]}, "ACWI|MYS": {"v": 0, "common": []}, "XEM|VUSA": {"v": 0, "common": []}, "XEM|MOM": {"v": 0, "common": []}, "XEM|AEM": {"v": 31.36, "common": ["TSMC", "Samsung Electronics", "SK hynix", "Tencent", "Alibaba"]}, "XEM|CSPX": {"v": 0, "common": []}, "XEM|EIMI": {"v": 28.919999999999998, "common": ["TSMC", "Samsung Electronics", "SK hynix", "Tencent", "Alibaba"]}, "XEM|XAI": {"v": 0, "common": []}, "XEM|RBOT": {"v": 0, "common": []}, "XEM|BTEC": {"v": 0, "common": []}, "XEM|AGED": {"v": 0, "common": []}, "XEM|INDIA": {"v": 0, "common": []}, "XEM|SWDA": {"v": 0, "common": []}, "XEM|SPXH": {"v": 0, "common": []}, "XEM|MYS": {"v": 0, "common": []}, "VUSA|MOM": {"v": 6.34, "common": ["Alphabet", "Micron Technology"]}, "VUSA|AEM": {"v": 0, "common": []}, "VUSA|CSPX": {"v": 37.79, "common": ["NVIDIA", "Apple", "Microsoft", "Alphabet", "Amazon", "Broadcom", "Meta Platforms", "Micron Technology", "Tesla"]}, "VUSA|EIMI": {"v": 0, "common": []}, "VUSA|XAI": {"v": 25.427, "common": ["Microsoft", "Apple", "NVIDIA", "Alphabet", "Amazon", "Meta Platforms"]}, "VUSA|RBOT": {"v": 2.88, "common": ["NVIDIA"]}, "VUSA|BTEC": {"v": 0, "common": []}, "VUSA|AGED": {"v": 0, "common": []}, "VUSA|INDIA": {"v": 0, "common": []}, "VUSA|SWDA": {"v": 15.29, "common": ["NVIDIA", "Apple", "Microsoft"]}, "VUSA|SPXH": {"v": 37.79, "common": ["NVIDIA", "Apple", "Microsoft", "Alphabet", "Amazon", "Broadcom", "Meta Platforms", "Micron Technology", "Tesla"]}, "VUSA|MYS": {"v": 0, "common": []}, "MOM|AEM": {"v": 0, "common": []}, "MOM|CSPX": {"v": 6.34, "common": ["Alphabet", "Micron Technology"]}, "MOM|EIMI": {"v": 0, "common": []}, "MOM|XAI": {"v": 7.8629999999999995, "common": ["Alphabet", "AMD"]}, "MOM|RBOT": {"v": 3.11, "common": ["AMD"]}, "MOM|BTEC": {"v": 0, "common": []}, "MOM|AGED": {"v": 0, "common": []}, "MOM|INDIA": {"v": 0, "common": []}, "MOM|SWDA": {"v": 0, "common": []}, "MOM|SPXH": {"v": 6.34, "common": ["Alphabet", "Micron Technology"]}, "MOM|MYS": {"v": 0, "common": []}, "AEM|CSPX": {"v": 0, "common": []}, "AEM|EIMI": {"v": 28.919999999999998, "common": ["TSMC", "Samsung Electronics", "SK hynix", "Tencent", "Alibaba"]}, "AEM|XAI": {"v": 0, "common": []}, "AEM|RBOT": {"v": 0, "common": []}, "AEM|BTEC": {"v": 0, "common": []}, "AEM|AGED": {"v": 0, "common": []}, "AEM|INDIA": {"v": 0, "common": []}, "AEM|SWDA": {"v": 0, "common": []}, "AEM|SPXH": {"v": 0, "common": []}, "AEM|MYS": {"v": 0, "common": []}, "CSPX|EIMI": {"v": 0, "common": []}, "CSPX|XAI": {"v": 25.427, "common": ["Microsoft", "Apple", "NVIDIA", "Alphabet", "Amazon", "Meta Platforms"]}, "CSPX|RBOT": {"v": 2.88, "common": ["NVIDIA"]}, "CSPX|BTEC": {"v": 0, "common": []}, "CSPX|AGED": {"v": 0, "common": []}, "CSPX|INDIA": {"v": 0, "common": []}, "CSPX|SWDA": {"v": 15.29, "common": ["NVIDIA", "Apple", "Microsoft"]}, "CSPX|SPXH": {"v": 37.79, "common": ["NVIDIA", "Apple", "Microsoft", "Alphabet", "Amazon", "Broadcom", "Meta Platforms", "Micron Technology", "Tesla"]}, "CSPX|MYS": {"v": 0, "common": []}, "EIMI|XAI": {"v": 0, "common": []}, "EIMI|RBOT": {"v": 0, "common": []}, "EIMI|BTEC": {"v": 0, "common": []}, "EIMI|AGED": {"v": 0, "common": []}, "EIMI|INDIA": {"v": 0, "common": []}, "EIMI|SWDA": {"v": 0, "common": []}, "EIMI|SPXH": {"v": 0, "common": []}, "EIMI|MYS": {"v": 0, "common": []}, "XAI|RBOT": {"v": 5.99, "common": ["AMD", "NVIDIA"]}, "XAI|BTEC": {"v": 0, "common": []}, "XAI|AGED": {"v": 0, "common": []}, "XAI|INDIA": {"v": 0, "common": []}, "XAI|SWDA": {"v": 14.003, "common": ["Apple", "NVIDIA", "Microsoft"]}, "XAI|SPXH": {"v": 25.427, "common": ["Microsoft", "Apple", "NVIDIA", "Alphabet", "Amazon", "Meta Platforms"]}, "XAI|MYS": {"v": 0, "common": []}, "RBOT|BTEC": {"v": 0, "common": []}, "RBOT|AGED": {"v": 0, "common": []}, "RBOT|INDIA": {"v": 0, "common": []}, "RBOT|SWDA": {"v": 2.88, "common": ["NVIDIA"]}, "RBOT|SPXH": {"v": 2.88, "common": ["NVIDIA"]}, "RBOT|MYS": {"v": 0, "common": []}, "BTEC|AGED": {"v": 0, "common": []}, "BTEC|INDIA": {"v": 0, "common": []}, "BTEC|SWDA": {"v": 0, "common": []}, "BTEC|SPXH": {"v": 0, "common": []}, "BTEC|MYS": {"v": 0, "common": []}, "AGED|INDIA": {"v": 0, "common": []}, "AGED|SWDA": {"v": 0, "common": []}, "AGED|SPXH": {"v": 0, "common": []}, "AGED|MYS": {"v": 0, "common": []}, "INDIA|SWDA": {"v": 0, "common": []}, "INDIA|SPXH": {"v": 0, "common": []}, "INDIA|MYS": {"v": 0, "common": []}, "SWDA|SPXH": {"v": 15.29, "common": ["NVIDIA", "Apple", "Microsoft"]}, "SWDA|MYS": {"v": 0, "common": []}, "SPXH|MYS": {"v": 0, "common": []}}, "same_index": [["VUSA", "CSPX", "S&P 500"], ["VUSA", "SPXH", "S&P 500"], ["CSPX", "SPXH", "S&P 500"], ["XEM", "AEM", "MSCI Emerging Markets"]], "markets": {"known": {"Stati Uniti": 57.60421962971921, "Giappone": 4.07214315070566, "Taiwan": 4.54521578881444, "Regno Unito": 2.3493140269664785, "Canada": 2.265254574899737, "Corea del Sud": 1.3624810203029807, "Cina": 1.260613280467244, "India": 0.9504694350000638, "Brasile": 0.2603994099551024, "Oro (materia prima)": 0.6926739709513318, "Malesia": 0.05625169520093253, "Italia": 1.105194056858662}, "unknown": 23.475769960158168}, "sectors": {"known": {"Tecnologia": 31.836579701099737, "Finanza": 14.934408500155854, "Industria": 8.370243513764624, "Consumi discrezionali": 1.5902759746217656, "Servizi di comunicazione": 0.6005753817331221, "Sanità": 0.5666074513167481, "Oro (materia prima)": 0.6926739709513318}, "unknown": 41.40863550635683}, "kpi": {"n_etf": 16, "n_etc": 1, "mapped": 28.474348760810987, "analysed_instr": 99.24379729752627, "n_companies": 50, "top10": 25.310396751549977}};
+const COLORS = {ACWI:"#3E8EF7",SWDA:"#8DB8FF",MOM:"#22B8C9",VUSA:"#E5484D",CSPX:"#F2797C",SPXH:"#B93A3E",XAI:"#A78BFA",RBOT:"#E879F9",BTEC:"#34D399",AGED:"#9BE7B7",XEM:"#F59E0B",AEM:"#F8C555",EIMI:"#C97A10",INDIA:"#FB8C3C",MYS:"#FDBF87",FRONT:"#94A3B8",GOLD:"#D4AF37",DIRETTO:"#E9ECF1"};
+const ORDER = ["ACWI","SWDA","MOM","VUSA","CSPX","SPXH","XAI","RBOT","BTEC","AGED","XEM","AEM","EIMI","INDIA","MYS","DIRETTO"];
+const INS = Object.fromEntries(D.instruments.map(i=>[i.code,i]));
+const NAME = c => c==="DIRETTO" ? "Azioni dirette" : INS[c].name;
+const fmtP = (v,d=2)=> v.toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
+const fmtE = v=> v.toLocaleString("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0});
+const el = (t,a={},h="")=>{const e=document.createElement(t);for(const k in a)e.setAttribute(k,a[k]);if(h)e.innerHTML=h;return e};
+const NS="http://www.w3.org/2000/svg";
+const sv=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+document.getElementById("m-total").textContent = fmtE(D.total)+" in titoli";
+document.getElementById("m-asof").textContent = D.asof;
+document.getElementById("m-asof2").textContent = "quotazioni "+D.asof;
+
+/* ---------- 1. KPI ---------- */
+const K=D.kpi;
+document.getElementById("kpis").innerHTML = `
+ <div class="kpi"><span class="eyebrow">Linee</span><div class="v">${K.n_etf}<small> ETF</small></div><div class="l">Numero di ETF</div><div class="d">Più 1 ETC sull'oro e 5 azioni detenute direttamente.</div></div>
+ <div class="kpi"><span class="eyebrow">Copertura</span><div class="v">${fmtP(K.mapped,1)}</div><div class="l">Valore ricondotto a singole aziende</div><div class="d">Gli strumenti analizzati valgono il ${fmtP(K.analysed_instr,1)} del portafoglio, ma per i fondi conosciamo solo le prime partecipazioni.</div><span class="flag">Analisi parziale</span></div>
+ <div class="kpi"><span class="eyebrow">Fermate</span><div class="v">${K.n_companies}</div><div class="l">Aziende distinte individuate</div><div class="d">Solo nella parte analizzata. Gli indici sottostanti ne contengono migliaia.</div></div>
+ <div class="kpi"><span class="eyebrow">Capolinea</span><div class="v">${fmtP(K.top10,1)}</div><div class="l">Peso delle prime 10 aziende</div><div class="d">Sul valore totale del portafoglio, sommando ETF e azioni dirette. Valore minimo.</div></div>`;
+
+/* ---------- 2. MAPPA ---------- */
+const COS = D.companies.map(c=>({...c,srcs:Object.keys(c.parts).sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b))}));
+const SHARED = COS.filter(c=>c.srcs.length>1);
+let view="shared", sel={type:"co",id:COS[0].name,passive:true};
+
+function chips(){
+  const box=document.getElementById("chips"); box.innerHTML=""; document.getElementById("offmap")?.remove();
+  ORDER.forEach(c=>{
+    const w = c==="DIRETTO" ? D.stocks.reduce((s,x)=>s+x.w,0) : INS[c].w;
+    const b=el("button",{type:"button",class:"chip","aria-pressed":String(sel.type==="etf"&&sel.id===c),title:NAME(c)});
+    b.innerHTML=`<span class="code ${c==="DIRETTO"?"dash":""}" style="background:${COLORS[c]}">${c==="DIRETTO"?"DIR":c}</span>${esc(c==="DIRETTO"?"Azioni dirette":NAME(c).replace(/^(iShares|Xtrackers|Vanguard|Amundi|Scalable) /,""))}<span class="w">${fmtP(w,1)}</span>`;
+    b.onclick=()=>select("etf",c); box.appendChild(b);
+  });
+  const off=D.instruments.filter(i=>!i.holdings.length);
+  const n=el("p",{class:"xs muted"});
+  n.textContent=`Fuori mappa: ${off.map(i=>i.code==="GOLD"?"oro fisico (nessuna azienda)":i.name.replace("Xtrackers ","")+" (dati non disponibili)").join(", ")} · ${fmtP(off.reduce((s,i)=>s+i.w,0),2)} del portafoglio.`;
+  box.after(n); n.id="offmap"; n.style.display="block"; n.style.margin="-6px 0 14px";
+}
+
+function drawMap(){
+  const svg=document.getElementById("map"); svg.innerHTML="";
+  const list = view==="shared" ? SHARED : COS;
+  document.getElementById("view-note").textContent = view==="shared"
+    ? `${SHARED.length} aziende presenti in almeno due strumenti, ordinate per esposizione`
+    : `Tutte le ${COS.length} aziende individuate, ordinate per esposizione`;
+  const lanes = ORDER.filter(c=>list.some(x=>x.parts[c]));
+  const W = svg.parentElement.clientWidth || 600;
+  const gap = W<480 ? 15 : 22, x0 = 16, H = 70;
+  const lx = i => x0 + i*gap;
+  const labX = lx(lanes.length-1) + 26;
+  const maxT = COS[0].total;
+  let y=H+14; const rows=[];
+  list.forEach(c=>{const t=7+22*Math.sqrt(c.total/maxT); const rh=Math.max(46,t+20); rows.push({c,t,y:y+rh/2}); y+=rh;});
+  const totalH=y+10;
+  svg.setAttribute("viewBox",`0 0 ${W} ${totalH}`); svg.setAttribute("width",W); svg.setAttribute("height",totalH);
+
+  // track bed + lines
+  const gL=sv("g");
+  lanes.forEach((c,i)=>{
+    const stops=rows.filter(r=>r.c.parts[c]); const last=stops[stops.length-1].y;
+    const g=sv("g",{class:"lane","data-l":c});
+    const x=lx(i);
+    g.appendChild(sv("line",{x1:x,y1:H+2,x2:x,y2:last,stroke:COLORS[c],"stroke-width":c==="ACWI"?7:5,"stroke-linecap":"round","stroke-dasharray":c==="DIRETTO"?"6 5":"none"}));
+    g.appendChild(sv("line",{x1:x-7,y1:last,x2:x+7,y2:last,stroke:COLORS[c],"stroke-width":4,"stroke-linecap":"round"}));
+    const tx=sv("text",{x:x+4,y:H-6,transform:`rotate(-60 ${x+4} ${H-6})`,fill:COLORS[c],"font-size":"11","font-family":"IBM Plex Mono, monospace","font-weight":"600"});
+    tx.textContent=c==="DIRETTO"?"DIR":c; g.appendChild(tx);
+    const hit=sv("rect",{x:x-gap/2,y:0,width:gap,height:last+4,fill:"transparent",class:"lane-hit"});
+    hit.addEventListener("click",()=>select("etf",c));
+    const tt=sv("title"); tt.textContent=NAME(c); hit.appendChild(tt);
+    g.appendChild(hit);
+    gL.appendChild(g);
+  });
+  svg.appendChild(gL);
+
+  // stations
+  rows.forEach(({c,t,y})=>{
+    const idx=c.srcs.filter(s=>lanes.includes(s)).map(s=>lanes.indexOf(s));
+    const a=Math.min(...idx), b=Math.max(...idx);
+    const g=sv("g",{class:"station","data-c":c.name,tabindex:"0",role:"button","aria-label":`${c.name}, ${fmtP(c.total)} del portafoglio`});
+    const hit=sv("rect",{x:0,y:y-22,width:W,height:44,fill:"transparent",class:"row-hit"});
+    g.appendChild(hit);
+    if(c.srcs.length>1) g.appendChild(sv("line",{x1:lx(b)+t/2,y1:y,x2:labX-6,y2:y,stroke:"#3A4452","stroke-width":1,"stroke-dasharray":"2 3"}));
+    else g.appendChild(sv("line",{x1:lx(b)+t/2,y1:y,x2:labX-6,y2:y,stroke:"#28303B","stroke-width":1,"stroke-dasharray":"2 3"}));
+    const ring=sv("rect",{x:lx(a)-t/2-4,y:y-t/2-4,width:lx(b)-lx(a)+t+8,height:t+8,rx:(t+8)/2,fill:"none",stroke:"var(--accent)","stroke-width":2.5,class:"ring",visibility:"hidden"});
+    g.appendChild(ring);
+    g.appendChild(sv("rect",{x:lx(a)-t/2,y:y-t/2,width:lx(b)-lx(a)+t,height:t,rx:t/2,fill:"#F4F2EC",stroke:"#0D1015","stroke-width":2.5}));
+    const dr=Math.max(2.6,Math.min(t/2-3.2,6));
+    c.srcs.forEach(s=>{const i=lanes.indexOf(s); if(i<0)return;
+      g.appendChild(sv("circle",{cx:lx(i),cy:y,r:dr,fill:s==="DIRETTO"?"#0D1015":COLORS[s]}));});
+    const n=sv("text",{x:labX,y:y-3,fill:"#EEF1F5","font-size":W<480?"13":"14","font-weight":"600",class:"st-name"}); n.textContent=c.name;
+    const v=sv("text",{x:labX,y:y+13,fill:"#AEB7C4","font-size":"11.5","font-family":"IBM Plex Mono, monospace"});
+    v.textContent=`${fmtP(c.total)} · ${fmtE(c.eur)}${c.srcs.length>1?` · ${c.srcs.length} linee`:""}`;
+    g.appendChild(n); g.appendChild(v);
+    const go=()=>select("co",c.name);
+    g.addEventListener("click",go); g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
+    svg.appendChild(g);
+  });
+  applySel();
+}
+
+function applySel(){
+  const svg=document.getElementById("map");
+  svg.classList.toggle("sel-etf",sel.type==="etf"); svg.classList.toggle("sel-co",sel.type==="co"&&!sel.passive);
+  svg.querySelectorAll(".lane").forEach(g=>{
+    const l=g.dataset.l;
+    g.classList.toggle("on", sel.type==="etf" ? l===sel.id : !!COS.find(c=>c.name===sel.id)?.parts[l]);
+  });
+  svg.querySelectorAll(".station").forEach(g=>{
+    const c=COS.find(x=>x.name===g.dataset.c);
+    const on = sel.type==="etf" ? !!c.parts[sel.id] : c.name===sel.id;
+    g.classList.toggle("on",on);
+    g.querySelector(".ring").setAttribute("visibility", (sel.type==="etf" && on && c.srcs.length>1) || (sel.type==="co"&&on&&!sel.passive) ? "visible":"hidden");
+  });
+  document.querySelectorAll("#chips .chip").forEach((b,i)=>b.setAttribute("aria-pressed",String(sel.type==="etf"&&sel.id===ORDER[i])));
+  panel();
+}
+function select(type,id){ sel = (sel.type===type&&sel.id===id&&!sel.passive) ? {type:"co",id:COS[0].name,passive:true} : {type,id}; applySel(); }
+
+function panel(){
+  const p=document.getElementById("panel");
+  if(sel.type==="co"){
+    const c=COS.find(x=>x.name===sel.id);
+    const segs=c.srcs.map(s=>`<i style="width:${c.parts[s]/c.total*100}%;background:${COLORS[s]}" title="${esc(NAME(s))}"></i>`).join("");
+    const li=c.srcs.slice().sort((a,b)=>c.parts[b]-c.parts[a]).map(s=>`<li><span class="sw ${s==="DIRETTO"?"dash":""}" style="background:${COLORS[s]}"></span><span class="n">${esc(NAME(s))}</span><span class="p">${fmtP(c.parts[s],3)}</span><span class="s">${c.parts[s]/c.total<0.01?"&lt;1":Math.round(c.parts[s]/c.total*100)}%</span></li>`).join("");
+    p.innerHTML=`<div><span class="eyebrow">${sel.passive?"Prima fermata per esposizione · tocca la mappa per cambiare":"Fermata selezionata"}</span><h3>${esc(c.name)}</h3><p class="xs muted">${esc(c.sector)} · ${esc(c.country)}</p></div>
+      <div><div class="big">${fmtP(c.total)}</div><p class="small muted">del portafoglio · circa ${fmtE(c.eur)}</p></div>
+      <div class="stack" role="img" aria-label="Ripartizione per strumento">${segs}</div>
+      <div><p class="xs muted" style="display:flex;justify-content:space-between"><span>Da dove arriva</span><span>% portafoglio · quota</span></p><ul class="src-list">${li}</ul></div>
+      <p class="note">Conta solo i fondi in cui ${esc(c.name)} compare tra le partecipazioni pubblicate che abbiamo. Può essere presente anche in altri tuoi ETF con pesi più piccoli: il totale è un minimo.</p>`;
+  } else {
+    const c=sel.id;
+    if(c==="DIRETTO"){
+      const li=D.stocks.map(s=>{const co=COS.find(x=>x.name===s.company);const ind=co.total-s.w;return `<li><span class="sw dash"></span><span class="n">${esc(s.company)}</span><span class="p">${fmtP(s.w)}</span><span class="s">${ind>0.0005?"+"+fmtP(ind)+" ETF":"solo diretta"}</span></li>`}).join("");
+      p.innerHTML=`<div><span class="eyebrow">Linea selezionata</span><h3>Azioni dirette</h3></div><div><div class="big">${fmtP(D.stocks.reduce((s,x)=>s+x.w,0))}</div><p class="small muted">del portafoglio in 5 titoli</p></div><ul class="src-list">${li}</ul><p class="note">La colonna di destra indica l'esposizione aggiuntiva alla stessa azienda che arriva dagli ETF.</p>`;
+      return;
+    }
+    const i=INS[c]; const known=i.holdings.reduce((s,h)=>s+h[1],0);
+    const mine=COS.filter(x=>x.parts[c]).sort((a,b)=>b.parts[c]-a.parts[c]);
+    const shared=mine.filter(x=>x.srcs.length>1);
+    p.innerHTML=`<div><span class="eyebrow">Linea selezionata · ${esc(i.isin)}</span><h3>${esc(i.name)}</h3></div>
+      <div><div class="big">${fmtP(i.w)}</div><p class="small muted">del portafoglio · ${fmtE(i.value)}</p></div>
+      <div><p class="xs muted">Fermate note (${mine.length}), peso nel fondo</p><ul class="src-list">${i.holdings.map(h=>{const co=COS.find(x=>x.name===h[0]);const sh=co.srcs.length>1;return `<li><span class="sw" style="background:${sh?"var(--accent)":"var(--line-strong)"}"></span><span class="n">${esc(h[0])}</span><span class="p">${fmtP(h[1])}</span><span class="s">${sh?"+"+(co.srcs.length-1):"solo qui"}</span></li>`}).join("")}</ul></div>
+      <div class="tags">${shared.length?`<span class="xs muted" style="width:100%">Interscambi con altre linee: ${shared.length} su ${mine.length}</span>`:""}</div>
+      <p class="note">Peso noto: ${fmtP(known,1)} del fondo (${i.listed} partecipazioni${i.n?` su circa ${i.n.toLocaleString("it-IT")}`:""}). Fonte: ${esc(i.src)}, ${esc(i.date)}.${i.note?" "+esc(i.note):""}</p>`;
+  }
+}
+document.getElementById("v-shared").onclick=()=>{view="shared";setView()};
+document.getElementById("v-all").onclick=()=>{view="all";setView()};
+function setView(){document.getElementById("v-shared").setAttribute("aria-pressed",view==="shared");document.getElementById("v-all").setAttribute("aria-pressed",view==="all");drawMap();}
+chips(); drawMap();
+let rz; window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(drawMap,150)});
+
+/* ---------- 3. MATRICE ---------- */
+const MXC = ["ACWI","SWDA","MOM","VUSA","CSPX","SPXH","XAI","RBOT","BTEC","AGED","XEM","AEM","EIMI","INDIA","MYS"];
+const ovKey=(a,b)=> D.overlap[a+"|"+b] ? a+"|"+b : b+"|"+a;
+const same=(a,b)=>D.same_index.find(s=>(s[0]===a&&s[1]===b)||(s[0]===b&&s[1]===a));
+const mxColor=v=>{const t=Math.min(1,v/40);const A=[27,33,42],B=[57,135,229];return `rgb(${A.map((x,i)=>Math.round(x+(B[i]-x)*Math.pow(t,.8))).join(",")})`};
+document.getElementById("ramp-bar").style.background=`linear-gradient(90deg,${mxColor(0)},${mxColor(20)},${mxColor(40)})`;
+let mxSel=["ACWI","VUSA"];
+function drawMx(){
+  const t=document.getElementById("mx");
+  let h=`<thead><tr><th></th>${MXC.map(c=>`<th><span style="color:${COLORS[c]}">${c}</span></th>`).join("")}</tr></thead><tbody>`;
+  MXC.forEach(a=>{
+    h+=`<tr><th><i class="sw" style="background:${COLORS[a]};width:10px"></i>${a}</th>`;
+    MXC.forEach(b=>{
+      if(a===b){h+=`<td class="diag">·</td>`;return;}
+      const o=D.overlap[ovKey(a,b)]; const v=o.v;
+      const isSel=(mxSel[0]===a&&mxSel[1]===b)||(mxSel[0]===b&&mxSel[1]===a);
+      h+=`<td class="${same(a,b)?"same":""} ${isSel?"sel":""}" data-a="${a}" data-b="${b}" style="background:${v>0?mxColor(v):"transparent"};color:${v>22?"#fff":v>0?"#EEF1F5":"#4A5463"}" title="${a} × ${b}: ${fmtP(v,1)}">${v>0?Math.round(v):"–"}</td>`;
+    });
+    h+="</tr>";
+  });
+  t.innerHTML=h+"</tbody>";
+  t.querySelectorAll("td[data-a]").forEach(td=>td.onclick=()=>{mxSel=[td.dataset.a,td.dataset.b];drawMx();});
+  explain();
+}
+function explain(){
+  const [a,b]=mxSel; const o=D.overlap[ovKey(a,b)]; const A=INS[a],B=INS[b];
+  const ha=Object.fromEntries(A.holdings), hb=Object.fromEntries(B.holdings);
+  const s=same(a,b);
+  const ka=A.holdings.reduce((x,h)=>x+h[1],0), kb=B.holdings.reduce((x,h)=>x+h[1],0);
+  const li=o.common.map(k=>`<li><span class="sw" style="background:var(--accent)"></span><span class="n">${esc(k)}</span><span class="p">${fmtP(Math.min(ha[k],hb[k]))}</span><span class="s">${fmtP(ha[k],1)} / ${fmtP(hb[k],1)}</span></li>`).join("");
+  document.getElementById("mx-explain").innerHTML=`<div><span class="eyebrow">Coppia selezionata</span><h3 style="font-size:18px;margin-top:4px"><span style="color:${COLORS[a]}">${a}</span> × <span style="color:${COLORS[b]}">${b}</span></h3><p class="xs muted">${esc(A.name)} · ${esc(B.name)}</p></div>
+   <div><div class="big">≥ ${fmtP(o.v,1)}</div><p class="small" style="margin-top:6px">${o.v>0?`Su 100 € investiti in uno dei due fondi, almeno ${o.v.toLocaleString("it-IT",{maximumFractionDigits:1})} € finiscono nelle stesse aziende e nella stessa misura dell'altro.`:`Tra le partecipazioni note dei due fondi non c'è nessuna azienda in comune. Non significa che non ce ne siano: sappiamo solo che non compaiono tra le prime.`}</p></div>
+   ${s?`<p class="small" style="color:var(--accent)">Entrambi replicano l'indice ${s[2]}: la sovrapposizione reale è vicina al 100%. Il ${fmtP(o.v,1)} misura solo le prime partecipazioni note.</p>`:""}
+   ${o.common.length?`<div><p class="xs muted" style="display:flex;justify-content:space-between"><span>Aziende in comune</span><span>minimo · ${a} / ${b}</span></p><ul class="src-list">${li}</ul></div>`:""}
+   <p class="note">Peso noto: ${a} ${fmtP(ka,1)} del fondo, ${b} ${fmtP(kb,1)}. Fonti: ${esc(A.src)} (${esc(A.date)}); ${esc(B.src)} (${esc(B.date)}).</p>`;
+}
+drawMx();
+
+/* ---------- 4. CONCENTRAZIONE ---------- */
+let cview="co";
+function drawBars(){
+  const box=document.getElementById("bars"); const note=document.getElementById("bars-note");
+  let rows=[];
+  if(cview==="co"){
+    const top=COS.slice(0,15); const mx=top[0].total;
+    box.innerHTML=top.map(c=>`<div class="bar-row"><span class="lbl">${esc(c.name)}</span><span class="track" style="width:${c.total/mx*100}%">${c.srcs.slice().sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b)).map(s=>`<i title="${esc(NAME(s))}: ${fmtP(c.parts[s],3)}" style="flex:${c.parts[s]};background:${s==="DIRETTO"?"repeating-linear-gradient(90deg,#E9ECF1 0 4px,#7C8696 4px 6px)":COLORS[s]}"></i>`).join("")}</span><span class="val">${fmtP(c.total)} <small>${fmtE(c.eur)}</small></span></div>`).join("");
+    note.textContent=`Prime 15 aziende per esposizione. I colori indicano lo strumento da cui arriva l'esposizione (stessi colori delle linee). Le 15 aziende sommano il ${fmtP(top.reduce((s,c)=>s+c.total,0),1)} del portafoglio; il resto del valore è in aziende non identificate dalle fonti disponibili.`;
+    return;
+  }
+  const src = cview==="se"?D.sectors:D.markets;
+  const ent=Object.entries(src.known).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(ent[0][1],src.unknown);
+  box.innerHTML=ent.map(([k,v])=>`<div class="bar-row"><span class="lbl">${esc(k)}</span><span class="track" style="width:${v/mx*100}%"><i style="flex:1;background:${cview==="se"?"#3E8EF7":"#22B8C9"}"></i></span><span class="val">${fmtP(v,1)} <small>${fmtE(v/100*D.total)}</small></span></div>`).join("")+
+   `<div class="bar-row unk"><span class="lbl">Non attribuito</span><span class="track" style="width:${src.unknown/mx*100}%"><i style="flex:1"></i></span><span class="val">${fmtP(src.unknown,1)} <small>${fmtE(src.unknown/100*D.total)}</small></span></div>`;
+  note.textContent = cview==="se"
+   ? "Somma delle ripartizioni settoriali pubblicate per ciascun fondo (fonti indicate in fondo alla pagina) più le azioni dirette. Per l'MSCI ACWI le fonti riportano solo i primi tre settori (Tecnologia, Finanza, Industria): gli altri settori dell'ACWI e i fondi tematici, momentum, India e Malesia finiscono in \"non attribuito\". Per questo Consumi discrezionali, Sanità e Servizi di comunicazione appaiono sottostimati."
+   : "Somma delle ripartizioni per paese pubblicate per ciascun fondo più le azioni dirette. Per l'MSCI ACWI sono noti i primi cinque paesi; i fondi tematici, momentum ed EM IMI non sono ripartiti e confluiscono in \"non attribuito\".";
+}
+document.querySelectorAll("#concentrazione .seg button").forEach(b=>b.onclick=()=>{cview=b.dataset.v;document.querySelectorAll("#concentrazione .seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));drawBars();});
+drawBars();
+
+/* ---------- 5. OSSERVAZIONI ---------- */
+(function(){
+  const acwi=INS.ACWI;
+  const big=COS.slice(0,9).filter(c=>c.parts.ACWI);
+  const bigTot=big.reduce((s,c)=>s+c.total,0), bigAcwi=big.reduce((s,c)=>s+c.parts.ACWI,0);
+  const mu=COS.find(c=>c.name==="Micron Technology"); const muRank=COS.indexOf(mu)+1;
+  const ts=COS.find(c=>c.name==="TSMC"); const amz=COS.find(c=>c.name==="Amazon");
+  const em=["XEM","AEM","EIMI"].reduce((s,c)=>s+INS[c].w,0);
+  const sp=["VUSA","CSPX","SPXH"].reduce((s,c)=>s+INS[c].w,0);
+  document.getElementById("obs").innerHTML=`
+   <div class="ob"><span class="eyebrow">La linea principale</span><div class="fig">${Math.round(bigAcwi/bigTot*100)}%</div><h3>Le grandi aziende arrivano quasi tutte da un solo fondo</h3><p>Lo Scalable MSCI AC World pesa il ${fmtP(acwi.w,1)} del portafoglio. Sulle ${big.length} aziende più grandi della mappa fornisce il ${Math.round(bigAcwi/bigTot*100)}% dell'esposizione. I tre ETF S&amp;P 500 (${fmtP(sp,1)} del totale, stesso indice) aggiungono a NVIDIA ${fmtP(COS[0].total-COS[0].parts.ACWI,2)} oltre al ${fmtP(COS[0].parts.ACWI,2)} che arriva dall'ACWI.</p></div>
+   <div class="ob"><span class="eyebrow">Interscambio con azione diretta</span><div class="fig">${fmtP(mu.total,2)}</div><h3>Micron è la ${muRank}ª esposizione del portafoglio</h3><p>L'azione detenuta direttamente vale ${fmtP(mu.parts.DIRETTO,2)}; il resto arriva da ${mu.srcs.length-1} ETF, tra cui il Momentum, dove Micron è la prima partecipazione (${fmtP(INS.MOM.holdings[0][1],2)} del fondo). Con l'aggiunta della posizione diretta, il peso di Micron sale da ${fmtP(mu.total-mu.parts.DIRETTO,2)} a ${fmtP(mu.total,2)}.</p></div>
+   <div class="ob"><span class="eyebrow">Quattro linee, una fermata</span><div class="fig">${fmtP(ts.total,2)}</div><h3>TSMC pesa più di Amazon</h3><p>TSMC arriva da quattro strumenti: l'ACWI e i tre ETF sui mercati emergenti (${fmtP(em,1)} del portafoglio), in cui è sempre la prima partecipazione con il 14–16% del fondo. Il totale supera Amazon (${fmtP(amz.total,2)}). Due di questi tre ETF replicano lo stesso indice MSCI Emerging Markets.</p></div>`;
+})();
+
+/* ---------- FONTI ---------- */
+(function(){
+  const rows=D.instruments.slice().sort((a,b)=>b.w-a.w).map(i=>{
+    const known=i.holdings.reduce((s,h)=>s+h[1],0);
+    return `<tr><td><span class="badge" style="border-color:${COLORS[i.code]};color:${COLORS[i.code]}">${i.code}</span></td><td>${esc(i.name)}<br><span class="xs muted num">${i.isin}</span></td><td class="r">${fmtP(i.w)}</td><td><span class="badge ${i.basis}">${i.basis}</span></td><td>${esc(i.src)}</td><td class="num">${esc(i.date)}</td><td class="r">${i.holdings.length?fmtP(known,1):"—"}</td><td class="xs muted">${i.mk_src?esc(i.mk_src):"—"}</td></tr>`}).join("");
+  const st=D.stocks.map(s=>`<tr><td><span class="badge">DIR</span></td><td>${esc(s.name)}<br><span class="xs muted num">${s.isin}</span></td><td class="r">${fmtP(s.w)}</td><td><span class="badge">diretta</span></td><td>Scalable Capital MCP</td><td class="num">26/10/2026</td><td class="r">100%</td><td class="xs muted">—</td></tr>`).join("");
+  document.getElementById("src-table").innerHTML=`<thead><tr><th>Linea</th><th>Strumento</th><th style="text-align:right">Peso</th><th>Base</th><th>Fonte partecipazioni</th><th>Data</th><th style="text-align:right">Peso noto del fondo</th><th>Settori e paesi</th></tr></thead><tbody>${rows}${st}</tbody>`;
+})();
+</script>
