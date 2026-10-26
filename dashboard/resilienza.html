@@ -1,0 +1,474 @@
+<title>Resilienza La mia pensione</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: colonna unica, sintesi in alto, poi due stress test affiancati, poi simulatore con controlli a sinistra e risultati a destra */
+:root{
+  --bg:#F2F3F1; --surface:#FCFCFB; --surface-2:#F6F7F4; --line:#DCDED8; --line-strong:#C3C6BD;
+  --ink:#171A16; --ink-2:#4A4F47; --ink-3:#6C7268;
+  --accent:#0A5F55; --accent-soft:#DCEBE7;
+  --pos:#3F6E2A; --neg:#A6401C; --warn:#8A6A0B; --neg-soft:#F4E2DA; --warn-soft:#F3ECD6;
+  --c1:#0A8C7E; --c2:#C2521A; --c3:#4059A0; --c4:#A88410; --c5:#8A3580; --c6:#4E7A2E;
+  --grid:#E3E5DF;
+  --shadow:0 1px 2px rgba(20,25,18,.05), 0 6px 18px -12px rgba(20,25,18,.28);
+  --f-display:Archivo,"IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+    --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#8E9488;
+    --accent:#3FB3A2; --accent-soft:#17302C;
+    --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227; --neg-soft:#35211A; --warn-soft:#2F2915;
+    --c1:#1F9787; --c2:#D2652E; --c3:#6684CC; --c4:#AF8C18; --c5:#AC64A2; --c6:#65A040;
+    --grid:#2A2E28;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121412; --surface:#1A1C19; --surface-2:#1F221E; --line:#2E322C; --line-strong:#434840;
+  --ink:#E9EBE6; --ink-2:#B0B5AC; --ink-3:#8E9488;
+  --accent:#3FB3A2; --accent-soft:#17302C;
+  --pos:#7FB55F; --neg:#DE7C52; --warn:#C9A227; --neg-soft:#35211A; --warn-soft:#2F2915;
+  --c1:#1F9787; --c2:#D2652E; --c3:#6684CC; --c4:#AF8C18; --c5:#AC64A2; --c6:#65A040;
+  --grid:#2A2E28;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px; margin:0 auto; padding-block:0 80px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1,h2,h3{font-family:var(--f-display); text-wrap:balance; margin:0}
+h1{font-size:clamp(28px,4.2vw,42px); font-weight:700; letter-spacing:-.025em; line-height:1.06}
+h2{font-size:22px; font-weight:600; letter-spacing:-.014em}
+h3{font-size:16px; font-weight:600}
+p{margin:0}
+.num{font-family:var(--f-mono); font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.eyebrow{font-family:var(--f-mono); font-size:10.5px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.muted{color:var(--ink-2)}
+.small{font-size:13px; line-height:1.5}
+.xs{font-size:12px; line-height:1.45}
+.pos{color:var(--pos)} .neg{color:var(--neg)} .warn{color:var(--warn)}
+
+header.top{border-bottom:1px solid var(--line); padding-block:32px 24px; margin-bottom:32px; display:grid; gap:10px}
+header.top p{max-width:68ch}
+.meta{display:flex; flex-wrap:wrap; gap:8px 18px}
+
+section{display:grid; gap:18px; margin-bottom:48px}
+.sec-head{display:grid; gap:6px}
+.sec-head p{max-width:72ch}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); padding:20px; min-width:0}
+.kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+.kpi{display:grid; gap:4px; align-content:start}
+.kpi .v{font-family:var(--f-mono); font-size:24px; font-weight:600; letter-spacing:-.02em}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.alloc-bar{display:flex; height:22px; border-radius:6px; overflow:hidden; background:var(--grid)}
+.alloc-bar span{display:block; height:100%}
+.legend{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px 20px; margin-top:14px}
+.legend div{display:flex; align-items:center; gap:8px; font-size:13px}
+.legend i{width:10px; height:10px; border-radius:2px; flex:none}
+.legend .num{margin-left:auto; color:var(--ink-2)}
+
+.tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface)}
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th,td{padding:9px 12px; text-align:left; border-bottom:1px solid var(--line); white-space:nowrap}
+th{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3); font-weight:500; background:var(--surface-2)}
+td.r, th.r{text-align:right}
+tbody tr:last-child td{border-bottom:0}
+.wbar{display:inline-block; height:6px; border-radius:3px; background:var(--accent); vertical-align:middle; margin-right:8px}
+details summary{cursor:pointer; font-weight:500; color:var(--accent); padding:4px 0}
+details summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+.flags{display:grid; gap:10px}
+.flag{display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:start; padding:12px 14px; border-radius:10px; background:var(--warn-soft); font-size:13.5px}
+.flag b{font-weight:600}
+.pill{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:999px; white-space:nowrap}
+.pill.warn{background:var(--warn); color:var(--surface)}
+.pill.neg{background:var(--neg); color:var(--surface)}
+.pill.ok{background:var(--accent); color:var(--surface)}
+
+.stress{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+@media (max-width:820px){.stress{grid-template-columns:minmax(0,1fr)}}
+.stress .card{display:grid; gap:14px; align-content:start}
+.st-head{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap}
+.big{font-family:var(--f-mono); font-size:34px; font-weight:600; letter-spacing:-.03em; color:var(--neg)}
+.rows{display:grid; gap:0}
+.rows div{display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:13.5px}
+.rows div:last-child{border-bottom:0}
+.rows .num{text-align:right}
+.note{font-size:12.5px; color:var(--ink-2); background:var(--surface-2); border-radius:8px; padding:10px 12px; line-height:1.5}
+.dd-track{position:relative; height:10px; background:var(--grid); border-radius:5px; overflow:hidden}
+.dd-track span{position:absolute; inset:0 auto 0 0; background:var(--neg); border-radius:5px}
+
+.sim{display:grid; grid-template-columns:300px minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:900px){.sim{grid-template-columns:minmax(0,1fr)}}
+.controls{display:grid; gap:16px}
+.presets{display:flex; flex-wrap:wrap; gap:6px}
+.presets button{font:inherit; font-size:12.5px; padding:6px 10px; border-radius:8px; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--ink); cursor:pointer}
+.presets button[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--surface)}
+.presets button:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.ctl{display:grid; gap:4px}
+.ctl label{display:flex; justify-content:space-between; font-size:13px; color:var(--ink-2)}
+.ctl label .num{color:var(--ink); font-weight:500}
+input[type=range]{width:100%; accent-color:var(--accent)}
+.ctl .xs{color:var(--ink-3)}
+
+.results{display:grid; gap:16px; min-width:0}
+.results > *, .controls > *{min-width:0}
+.cmp th:nth-child(2), .cmp td:nth-child(2){color:var(--c2)}
+.cmp th:nth-child(3), .cmp td:nth-child(3){color:var(--accent)}
+.cmp td{white-space:normal}
+.cmp td.r{white-space:nowrap}
+.chart-card{display:grid; gap:10px}
+.chart-legend{display:flex; flex-wrap:wrap; gap:6px 16px; font-size:12.5px; color:var(--ink-2)}
+.chart-legend span{display:inline-flex; align-items:center; gap:6px}
+.chart-legend i{width:14px; height:3px; border-radius:2px}
+svg text{font-family:var(--f-mono); font-size:10.5px; fill:var(--ink-3)}
+.verdict{font-size:14px; line-height:1.6; padding:14px 16px; border-radius:10px; background:var(--accent-soft)}
+
+.notes{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
+@media (max-width:820px){.notes{grid-template-columns:minmax(0,1fr)}}
+.notes ul{margin:8px 0 0; padding-left:18px; display:grid; gap:8px; font-size:13.5px}
+footer{border-top:1px solid var(--line); padding-top:18px; font-size:12px; color:var(--ink-3)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Dashboard di resilienza · portafoglio «La mia pensione»</span>
+  <h1>Cosa succede ai tuoi 40.042 € se il mercato crolla davvero</h1>
+  <p class="muted">Dati reali letti da Scalable Capital il 26/10/2026 alle 08:46 UTC. Gli scenari sono stress test, non previsioni: servono a capire quanto dolore puoi sopportare e quanto conta continuare a versare.</p>
+  <div class="meta xs muted">
+    <span>Posizioni: <b class="num" id="m-npos"></b></span>
+    <span>Liquidità sul conto: <b class="num">0,00 €</b></span>
+    <span>Guadagno dall'inizio: <b class="num pos">+5.995,85 €</b></span>
+    <span>Piano di accumulo attivo: <b class="num">500 €/mese</b> su Amundi Core MSCI World</span>
+  </div>
+</header>
+
+<!-- ================= SNAPSHOT ================= -->
+<section id="snapshot">
+  <div class="sec-head">
+    <span class="eyebrow">📊 Snapshot attuale</span>
+    <h2>Valore e composizione</h2>
+  </div>
+  <div class="kpis">
+    <div class="card kpi"><span class="eyebrow">Valore totale</span><span class="v num">40.042 €</span><span class="xs muted">titoli 40.042,30 € · crypto 0 €</span></div>
+    <div class="card kpi"><span class="eyebrow">Azionario</span><span class="v num" id="k-eq"></span><span class="xs muted">ETF + azioni singole</span></div>
+    <div class="card kpi"><span class="eyebrow">Oro (ETC)</span><span class="v num" id="k-gold"></span><span class="xs muted">unico asset non azionario</span></div>
+    <div class="card kpi"><span class="eyebrow">Obbligazioni / cash</span><span class="v num">0,0%</span><span class="xs muted">nessun cuscinetto nel conto</span></div>
+  </div>
+
+  <div class="card">
+    <div class="alloc-bar" id="alloc-bar" role="img" aria-label="Composizione del portafoglio per macro-categoria"></div>
+    <div class="legend" id="alloc-legend"></div>
+  </div>
+
+  <div class="flags">
+    <div class="flag"><span class="pill neg">Rischio</span><span><b>99,3% azionario, 0% obbligazioni, 0 € di liquidità.</b> In un crollo il portafoglio scende praticamente quanto il mercato: l'oro pesa 278 €, non protegge nulla. Tutta la resilienza deve venire da fuori (fondo emergenza, stipendio).</span></div>
+    <div class="flag"><span class="pill warn">Struttura</span><span><b>78% in un solo ETF (MSCI ACWI)</b>, che già contiene USA, emergenti e singoli titoli. Le altre <span class="num" id="f-small"></span> posizioni sotto l'1% aggiungono complessità ma quasi nessuna diversificazione reale; i 3 ETF S&amp;P 500 sono duplicati tra loro.</span></div>
+    <div class="flag"><span class="pill warn">Esposizione USA</span><span><b>Circa 60% USA in look-through</b> (stima: ~64% dell'ACWI + ETF S&amp;P 500 + titoli USA). Lo scenario Giappone 1989 è quindi meno teorico di quanto sembri: è il rischio di un mercato dominante sopravvalutato.</span></div>
+  </div>
+
+  <details>
+    <summary>Tutte le 22 posizioni</summary>
+    <div class="tbl-wrap" style="margin-top:10px">
+      <table>
+        <thead><tr><th>Strumento</th><th>Categoria</th><th class="r">Quote</th><th class="r">Prezzo €</th><th class="r">Valore €</th><th class="r">Peso</th></tr></thead>
+        <tbody id="pos-body"></tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<!-- ================= STRESS TEST ================= -->
+<section id="stress">
+  <div class="sec-head">
+    <span class="eyebrow">🌪️ Stress test: 1929 e 1989</span>
+    <h2>Lo stesso crollo applicato al tuo portafoglio di oggi</h2>
+    <p class="muted small">Il ribasso indicato si applica a tutta la parte azionaria; l'oro resta fermo (ipotesi prudente). Gli anni di recupero "con PAC" assumono 300 €/mese versati per tutta la durata.</p>
+  </div>
+  <div class="stress" id="stress-cards"></div>
+</section>
+
+<!-- ================= PIC vs PAC ================= -->
+<section id="pac">
+  <div class="sec-head">
+    <span class="eyebrow">🛡️ Simulazione di salvataggio: PIC vs PAC</span>
+    <h2>Fermo o continuo a comprare?</h2>
+    <p class="muted small">Il mercato scende del 50% in modo graduale, resta sul fondo per un periodo, poi risale a un tasso annuo costante. Dopo il ritorno ai massimi cresce al tasso di lungo periodo. Muovi i cursori per cambiare lo scenario.</p>
+  </div>
+
+  <div class="sim">
+    <div class="card controls">
+      <div class="ctl">
+        <span class="eyebrow">Scenario</span>
+        <div class="presets" id="presets">
+          <button type="button" data-p="base" aria-pressed="true">−50% prolungato</button>
+          <button type="button" data-p="c1929" aria-pressed="false">1929</button>
+          <button type="button" data-p="jp" aria-pressed="false">Giappone 1989</button>
+        </div>
+      </div>
+      <div class="ctl"><label for="i-depth">Ribasso massimo <span class="num" id="o-depth"></span></label><input type="range" id="i-depth" min="20" max="90" step="1"></div>
+      <div class="ctl"><label for="i-decl">Durata della discesa <span class="num" id="o-decl"></span></label><input type="range" id="i-decl" min="3" max="60" step="1"></div>
+      <div class="ctl"><label for="i-bot">Mesi fermi sul fondo <span class="num" id="o-bot"></span></label><input type="range" id="i-bot" min="0" max="60" step="1"></div>
+      <div class="ctl"><label for="i-rec">Velocità di risalita <span class="num" id="o-rec"></span></label><input type="range" id="i-rec" min="2" max="20" step="0.5"><span class="xs">rendimento annuo dal fondo fino ai vecchi massimi</span></div>
+      <div class="ctl"><label for="i-post">Crescita dopo il recupero <span class="num" id="o-post"></span></label><input type="range" id="i-post" min="0" max="10" step="0.5"></div>
+      <div class="ctl"><label for="i-pac">Versamento PAC <span class="num" id="o-pac"></span></label><input type="range" id="i-pac" min="50" max="1000" step="50"><span class="xs">hai già un piano da 500 €/mese: con quello sarebbero 800 €</span></div>
+      <div class="ctl"><label for="i-hor">Orizzonte di confronto <span class="num" id="o-hor"></span></label><input type="range" id="i-hor" min="5" max="35" step="1"></div>
+    </div>
+
+    <div class="results">
+      <div class="tbl-wrap">
+        <table class="cmp">
+          <thead><tr><th>Metrica</th><th class="r">PIC · fermo</th><th class="r">PAC · <span id="h-pac"></span></th></tr></thead>
+          <tbody id="cmp-body"></tbody>
+        </table>
+      </div>
+      <div class="verdict" id="verdict"></div>
+      <div class="card chart-card">
+        <div class="st-head"><h3>Valore del portafoglio nel tempo</h3><span class="xs muted">anni dall'inizio del crollo</span></div>
+        <div class="chart-legend">
+          <span><i style="background:var(--c2)"></i>PIC</span>
+          <span><i style="background:var(--accent)"></i>PAC</span>
+          <span><i style="background:var(--ink-3)"></i>capitale versato PAC</span>
+        </div>
+        <div id="chart"></div>
+      </div>
+      <div>
+        <h3 style="margin-bottom:8px">Quanto dipende tutto dalla velocità di risalita</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Risalita annua</th><th class="r">Pareggio PIC</th><th class="r">Pareggio PAC</th><th class="r">Rend. PIC</th><th class="r">Rend. PAC</th></tr></thead>
+            <tbody id="sens-body"></tbody>
+          </table>
+        </div>
+        <p class="xs muted" style="margin-top:6px">Stessi parametri dello scenario sopra, cambia solo la velocità di risalita. Rendimento medio annuo all'orizzonte scelto.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= NOTE ================= -->
+<section id="note">
+  <div class="sec-head">
+    <span class="eyebrow">Cosa i numeri non dicono</span>
+    <h2>Rischi che la simulazione non vede</h2>
+  </div>
+  <div class="notes">
+    <div class="card">
+      <h3>Il PAC funziona solo se lo stipendio regge</h3>
+      <ul>
+        <li>Nel 1932 la disoccupazione USA era al 25%. Le crisi lunghe colpiscono i redditi proprio quando il PAC dovrebbe comprare a sconto. Il vantaggio del PAC presuppone 300 €/mese garantiti per 10-25 anni.</li>
+        <li>Con 0 € di liquidità nel conto, una spesa imprevista durante il crollo ti costringe a vendere ai minimi. Il fondo emergenza (6-12 mesi di spese, fuori dal mercato) è la vera assicurazione di questo portafoglio. Se ce l'hai già sul conto corrente, il quadro migliora molto: dimmelo e lo includo.</li>
+        <li>Il rischio maggiore non è il -50%, è smettere di versare o vendere a -40%. Gli scenari assumono disciplina perfetta.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Limiti del modello</h3>
+      <ul>
+        <li>Tutto l'azionario si muove insieme. Nelle crisi le correlazioni salgono verso 1, quindi è un'approssimazione ragionevole, ma emergenti e tematici possono fare peggio del mercato.</li>
+        <li>Prezzi nominali: niente inflazione, costi (TER), tasse (26% sulle plusvalenze in Italia) o dividendi oltre a quelli già reinvestiti dagli ETF ad accumulo.</li>
+        <li>Il rendimento del PAC è un rendimento ponderato per il capitale (IRR). Non si confronta alla pari con il PIC: il PAC espone più capitale al rischio e ottiene un tasso più alto perché compra sul fondo.</li>
+        <li>La storia reale è stata più varia di questi scenari: un portafoglio globale nel 1929 avrebbe perso meno degli USA, mentre il Giappone reale ha fatto peggio del -60% / 20 anni.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>Fonte: Scalable Capital MCP, portafoglio ix6zLKSoC58GsNDFaC7j5Z, valutazione 2026-10-26 08:46 UTC. Dati storici: Dow Jones 1929-1954, Nikkei 225 1989-2024. Materiale informativo, non consulenza finanziaria.</footer>
+</div>
+
+<script>
+const H=[
+ ["Scalable MSCI AC World Xtrackers","LU2903252349","Globale",12.118,2582.259899],
+ ["Xtrackers MSCI Emerging Markets","IE00BTJRMP35","Emergenti",76.165,24.438308],
+ ["Vanguard S&P 500","IE00BFMXXD54","USA",132.0425,14],
+ ["iShares Edge MSCI World Momentum","IE00BP3QZ825","Globale",97.81,13],
+ ["Amundi MSCI Emerging Markets Swap","LU1681045370","Emergenti",7.2572,93],
+ ["iShares Core S&P 500","IE00B5BMR087","USA",736.38,0.64537],
+ ["iShares Core MSCI EM IMI","IE00BKM4GZ66","Emergenti",44.8585,8.304],
+ ["Ferrari","NL0011585146","Azioni singole",355.45,1.016206],
+ ["Xtrackers AI & Big Data","IE00BGV5VN51","Tematici",212.075,1.443179],
+ ["iShares Physical Gold ETC","IE00B4ND3602","Oro",69.4875,4],
+ ["Micron Technology","US5951121038","Azioni singole",787,0.350839],
+ ["iShares Automation & Robotics","IE00BYZK4552","Tematici",18.846,8.325875],
+ ["PayPal Holdings","US70450Y1038","Azioni singole",50.76,3.022873],
+ ["SpaceX","US84615Q1031","Azioni singole",132.64,1],
+ ["iShares Nasdaq US Biotechnology","IE00BYXG2H39","Tematici",9.123,12.075295],
+ ["iShares Ageing Population","IE00BYZK4669","Tematici",9.3255,11.77],
+ ["iShares MSCI India","IE00BZCQB185","Emergenti",7.325,14.981496],
+ ["Brunello Cucinelli","IT0004764699","Azioni singole",85.01,1.009313],
+ ["iShares Core MSCI World","IE00B4L5Y983","Globale",129.7675,0.539],
+ ["iShares S&P 500 EUR Hedged","IE00B3ZW0K18","USA",156.7125,0.308],
+ ["Xtrackers S&P Select Frontier Swap","LU0328476410","Emergenti",25.965,0.989],
+ ["Xtrackers MSCI Malaysia","LU0514694370","Emergenti",12.351,1.834],
+];
+const CAT=[["Globale","var(--accent)"],["Emergenti","var(--c3)"],["USA","var(--c2)"],["Azioni singole","var(--c5)"],["Tematici","var(--c6)"],["Oro","var(--c4)"]];
+const pos=H.map(([n,i,c,p,q])=>({n,i,c,p,q,v:p*q}));
+const TOT=pos.reduce((s,x)=>s+x.v,0);
+const GOLD=pos.filter(x=>x.c==="Oro").reduce((s,x)=>s+x.v,0);
+const EQ=TOT-GOLD;
+
+const eur=(v,d=0)=>v.toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d})+" €";
+const pct=(v,d=1)=>(v*100).toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d})+"%";
+const yrs=m=>m===null?"oltre l'orizzonte":(m/12).toLocaleString("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1})+" anni";
+const $=id=>document.getElementById(id);
+
+// ---------- snapshot ----------
+$("m-npos").textContent=pos.length;
+$("k-eq").textContent=pct(EQ/TOT);
+$("k-gold").textContent=pct(GOLD/TOT);
+$("f-small").textContent=pos.filter(x=>x.v/TOT<0.01).length;
+const byCat=CAT.map(([c,col])=>({c,col,v:pos.filter(x=>x.c===c).reduce((s,x)=>s+x.v,0)}));
+$("alloc-bar").innerHTML=byCat.map(b=>`<span style="width:${b.v/TOT*100}%;background:${b.col}" title="${b.c} ${pct(b.v/TOT)}"></span>`).join("");
+$("alloc-legend").innerHTML=byCat.map(b=>`<div><i style="background:${b.col}"></i>${b.c}<span class="num">${eur(b.v)} · ${pct(b.v/TOT)}</span></div>`).join("");
+const maxW=Math.max(...pos.map(x=>x.v));
+$("pos-body").innerHTML=pos.sort((a,b)=>b.v-a.v).map(x=>`<tr><td>${x.n}<div class="xs muted">${x.i}</div></td><td>${x.c}</td><td class="r num">${x.q.toLocaleString("it-IT",{maximumFractionDigits:4})}</td><td class="r num">${x.p.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="r num">${x.v.toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="r num"><span class="wbar" style="width:${Math.max(2,x.v/maxW*60)}px"></span>${pct(x.v/TOT,2)}</td></tr>`).join("");
+
+// ---------- engine ----------
+// Prezzo mensile dell'azionario (1 = prima del crollo): discesa geometrica, fondo piatto, risalita a tasso costante, poi crescita di lungo periodo.
+function path(o){
+  const bot=1-o.depth; let r=o.rec;
+  if(o.recoverAtM){ r=Math.pow(1/bot,12/(o.recoverAtM-o.declineM-o.bottomM))-1; }
+  const mr=Math.pow(1+r,1/12), mp=Math.pow(1+o.post,1/12), p=[1];
+  for(let m=1;m<=o.horizonM;m++){
+    if(m<=o.declineM) p.push(Math.pow(bot,m/o.declineM));
+    else if(m<=o.declineM+o.bottomM) p.push(bot);
+    else{ const prev=p[m-1]; p.push(prev<1? Math.min(prev*mr,1) : prev*mp); }
+  }
+  return {p,r};
+}
+function sim(o,pac){
+  const {p,r}=path(o), V0=EQ+GOLD;
+  let units=EQ, inv=V0, paid=0, bought=0, beP=null, beC=null, beC0=null;
+  const pic=[], pv=[], invA=[], flows=[-V0];
+  for(let m=0;m<=o.horizonM;m++){
+    if(m>0&&pac>0){ units+=pac/p[m]; inv+=pac; paid+=pac; bought+=pac/p[m]; }
+    const a=EQ*p[m]+GOLD, b=units*p[m]+GOLD;
+    pic.push(a); pv.push(b); invA.push(inv);
+    if(m>o.declineM){
+      if(beP===null&&a>=V0-0.01) beP=m;
+      if(beC===null&&b>=inv-0.01) beC=m;
+      if(beC0===null&&b>=V0-0.01) beC0=m;
+    }
+    if(m>0) flows.push(m===o.horizonM? b-pac : -pac);
+  }
+  let lo=-0.5,hi=0.5; const npv=x=>flows.reduce((s,f,i)=>s+f/Math.pow(1+x,i),0);
+  for(let i=0;i<120;i++){const mid=(lo+hi)/2; npv(mid)>0?lo=mid:hi=mid;}
+  const Hy=o.horizonM/12;
+  return {r,p,pic,pv,invA,beP,beC,beC0,trough:Math.min(...pic),minPac:Math.min(...pv),
+    picCAGR:Math.pow(pic[o.horizonM]/V0,1/Hy)-1, pacIRR:Math.pow(1+lo,12)-1,
+    picEnd:pic[o.horizonM], pacEnd:pv[o.horizonM], invEnd:inv, avgCost:bought?paid/bought:1};
+}
+
+// ---------- stress cards ----------
+const STRESS=[
+ {key:"c1929",title:"Wall Street 1929",tag:"−89% azionario",o:{depth:.89,declineM:34,bottomM:0,recoverAtM:300,post:.07,horizonM:360},
+  rec:"25 anni (prezzo nominale, 1929 → 1954)",
+  note:"Il Dow Jones toccò il fondo a luglio 1932, dopo 34 mesi. Contando dividendi e deflazione, chi restava investito recuperava in termini reali in circa 7 anni; il -89% e i 25 anni valgono per il solo prezzo. Un portafoglio globale come il tuo nel 1929-32 avrebbe perso meno degli USA, ma qui applichiamo lo scenario peggiore come richiesto."},
+ {key:"jp",title:"Giappone 1989",tag:"−60%, 20 anni",o:{depth:.60,declineM:36,bottomM:0,recoverAtM:240,post:.07,horizonM:300},
+  rec:"20 anni (ipotesi dello scenario)",
+  note:"La realtà fu peggiore dello scenario: il Nikkei perse fino all'82% (minimo nel 2009) e tornò ai massimi del 1989 solo a febbraio 2024, dopo 34 anni. Il Giappone pesava oltre il 40% dell'indice mondiale nel 1989; oggi gli USA pesano circa il 64% dell'ACWI."},
+];
+$("stress-cards").innerHTML=STRESS.map(s=>{
+  const a=sim(s.o,0), b=sim(s.o,300);
+  const loss=EQ*s.o.depth;
+  return `<article class="card">
+    <div class="st-head"><h3>${s.title}</h3><span class="pill neg">${s.tag}</span></div>
+    <div><span class="eyebrow">Perdita sul portafoglio</span><div class="big">−${eur(loss)}</div></div>
+    <div class="dd-track" role="img" aria-label="Drawdown ${pct(a.trough/TOT-1)}"><span style="width:${(1-a.trough/TOT)*100}%"></span></div>
+    <div class="rows">
+      <div><span>Valore al minimo</span><span class="num">${eur(a.trough)}</span></div>
+      <div><span>Drawdown massimo</span><span class="num neg">${pct(a.trough/TOT-1)}</span></div>
+      <div><span>Durata della discesa</span><span class="num">${s.o.declineM} mesi</span></div>
+      <div><span>Recupero dei 40.042 € · fermo</span><span class="num">${yrs(a.beP)}</span></div>
+      <div><span>Recupero dei 40.042 € · PAC 300 €</span><span class="num pos">${yrs(b.beC0)}</span></div>
+      <div><span>Pareggio sul capitale versato · PAC</span><span class="num">${yrs(b.beC)}</span></div>
+      <div><span>Recupero storico reale</span><span class="num">${s.rec}</span></div>
+    </div>
+    <p class="note">${s.note}</p>
+  </article>`;
+}).join("");
+
+// ---------- simulator ----------
+const PRESETS={
+  base:{depth:50,decl:24,bot:12,rec:7,post:7,pac:300,hor:20},
+  c1929:{depth:89,decl:34,bot:0,rec:10.5,post:7,pac:300,hor:30},
+  jp:{depth:60,decl:36,bot:0,rec:5.5,post:7,pac:300,hor:25},
+};
+const ids=["depth","decl","bot","rec","post","pac","hor"];
+function setPreset(k){
+  const p=PRESETS[k]; ids.forEach(i=>$("i-"+i).value=p[i]);
+  document.querySelectorAll("#presets button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===k));
+  render();
+}
+document.querySelectorAll("#presets button").forEach(b=>b.addEventListener("click",()=>setPreset(b.dataset.p)));
+ids.forEach(i=>$("i-"+i).addEventListener("input",()=>{document.querySelectorAll("#presets button").forEach(b=>b.setAttribute("aria-pressed","false"));render();}));
+
+function read(){
+  const v=i=>+$("i-"+i).value;
+  return {o:{depth:v("depth")/100,declineM:v("decl"),bottomM:v("bot"),rec:v("rec")/100,post:v("post")/100,horizonM:v("hor")*12},pac:v("pac")};
+}
+function render(){
+  const {o,pac}=read();
+  $("o-depth").textContent="−"+$("i-depth").value+"%";
+  $("o-decl").textContent=o.declineM+" mesi";
+  $("o-bot").textContent=o.bottomM+" mesi";
+  $("o-rec").textContent=pct(o.rec)+"/anno";
+  $("o-post").textContent=pct(o.post)+"/anno";
+  $("o-pac").textContent=eur(pac)+"/mese";
+  $("o-hor").textContent=(o.horizonM/12)+" anni";
+  $("h-pac").textContent=eur(pac)+"/mese";
+  const a=sim(o,0), b=sim(o,pac), Hy=o.horizonM/12;
+  const rows=[
+    ["Valore al minimo",eur(a.trough),eur(b.minPac)],
+    ["Ritorno a 40.042 € (valore pre-crollo)",yrs(a.beP),yrs(b.beC0)],
+    ["Pareggio sul capitale versato",yrs(a.beP),yrs(b.beC)],
+    ["Capitale versato in totale",eur(TOT),eur(b.invEnd)],
+    [`Valore dopo ${Hy} anni`,eur(a.picEnd),eur(b.pacEnd)],
+    ["Guadagno netto",eur(a.picEnd-TOT),eur(b.pacEnd-b.invEnd)],
+    [`Rendimento medio annuo su ${Hy} anni`,pct(a.picCAGR),pct(b.pacIRR)+" <span class='xs muted'>(IRR)</span>"],
+    ["Prezzo medio dei nuovi acquisti",'—',pct(b.avgCost,0)+" del prezzo pre-crollo"],
+  ];
+  $("cmp-body").innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td class="r num">${r[1]}</td><td class="r num">${r[2]}</td></tr>`).join("");
+  const gain=(a.beP===null||b.beC===null)?null:(a.beP-b.beC)/12;
+  $("verdict").innerHTML = b.beC===null
+    ? `In questo scenario nemmeno il PAC va in pari entro ${Hy} anni. Il problema non è la strategia ma l'ipotesi di risalita: con questi numeri il mercato non torna ai livelli di partenza.`
+    : `Con il PAC da ${eur(pac)} torni in pari sul capitale versato in <b>${yrs(b.beC)}</b> contro <b>${yrs(a.beP)}</b> restando fermo${gain!==null?` (<b>${gain.toLocaleString("it-IT",{maximumFractionDigits:1})} anni prima</b>)`:""}, e rivedi i 40.042 € già dopo <b>${yrs(b.beC0)}</b>. Il prezzo da pagare: versi altri ${eur(b.invEnd-TOT)} in un mercato che scende, senza sapere quando finisce.`;
+  // sensitivity
+  $("sens-body").innerHTML=[3,5,7,10,15].map(r=>{const oo={...o,rec:r/100},x=sim(oo,0),y=sim(oo,pac);
+    return `<tr><td class="num">${r}%/anno</td><td class="r num">${yrs(x.beP)}</td><td class="r num">${yrs(y.beC)}</td><td class="r num">${pct(x.picCAGR)}</td><td class="r num">${pct(y.pacIRR)}</td></tr>`}).join("");
+  drawChart(a,b,o);
+}
+
+function drawChart(a,b,o){
+  const W=720,Hh=280,L=58,R=12,T=12,B=28, n=o.horizonM;
+  const maxV=Math.max(...b.pv,...b.invA,...a.pic)*1.05;
+  const step=niceStep(maxV/5);
+  const x=m=>L+(W-L-R)*m/n, y=v=>T+(Hh-T-B)*(1-v/maxV);
+  const line=(arr)=>arr.map((v,m)=>(m?"L":"M")+x(m).toFixed(1)+","+y(v).toFixed(1)).join("");
+  let g="";
+  for(let v=0;v<=maxV;v+=step){g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/><text x="${L-6}" y="${y(v)+3.5}" text-anchor="end">${v>=1000?(v/1000).toLocaleString("it-IT")+"k":v}</text>`;}
+  const ys=n/12, xs=ys>20?5:ys>10?2:1;
+  for(let t=0;t<=ys;t+=xs){g+=`<text x="${x(t*12)}" y="${Hh-8}" text-anchor="middle">${t}</text>`;}
+  g+=`<line x1="${L}" x2="${W-R}" y1="${y(TOT)}" y2="${y(TOT)}" stroke="var(--ink-3)" stroke-dasharray="2 4" stroke-width="1"/><text x="${W-R}" y="${y(TOT)-5}" text-anchor="end">valore pre-crollo</text>`;
+  const area=line(a.pic)+`L${x(n)},${y(0)}L${x(0)},${y(0)}Z`;
+  g+=`<path d="${area}" fill="var(--c2)" fill-opacity=".07"/>`;
+  g+=`<path d="${line(b.invA)}" fill="none" stroke="var(--ink-3)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  g+=`<path d="${line(a.pic)}" fill="none" stroke="var(--c2)" stroke-width="2"/>`;
+  g+=`<path d="${line(b.pv)}" fill="none" stroke="var(--accent)" stroke-width="2.2"/>`;
+  const dot=(m,v,c)=>m===null?"":`<circle cx="${x(m)}" cy="${y(v)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="1.5"/>`;
+  g+=dot(a.beP,a.beP!==null?a.pic[a.beP]:0,"var(--c2)")+dot(b.beC,b.beC!==null?b.pv[b.beC]:0,"var(--accent)");
+  $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="Andamento del valore PIC e PAC">${g}</svg>`;
+}
+function niceStep(s){const p=Math.pow(10,Math.floor(Math.log10(s))),f=s/p;return (f<1.5?1:f<3?2:f<7?5:10)*p;}
+
+setPreset("base");
+</script>
