@@ -132,6 +132,32 @@ input[type=range]{width:100%; accent-color:var(--accent)}
 svg text{font-family:var(--f-mono); font-size:10.5px; fill:var(--ink-3)}
 .verdict{font-size:14px; line-height:1.6; padding:14px 16px; border-radius:10px; background:var(--accent-soft)}
 
+.rec-kpis{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px}
+@media (max-width:760px){.rec-kpis{grid-template-columns:minmax(0,1fr)}}
+.rec-kpis .card{background:var(--accent-soft); border-color:transparent; box-shadow:none}
+.rec-kpis .v{color:var(--accent)}
+.tl{display:grid; gap:4px}
+.tl-head{display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap}
+.seg{display:inline-flex; border:1px solid var(--line-strong); border-radius:8px; overflow:hidden}
+.seg button{font:inherit; font-size:12.5px; padding:6px 10px; border:0; background:var(--surface-2); color:var(--ink); cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--surface)}
+.seg button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.tl-row{display:grid; grid-template-columns:minmax(0,190px) minmax(0,1fr) 96px; gap:12px; align-items:center; padding:8px 0; border-bottom:1px dashed var(--line)}
+.tl-row:last-child{border-bottom:0}
+.tl-row.extreme .tl-name b{color:var(--neg)}
+.tl-name{display:grid; gap:1px; font-size:13px; line-height:1.3}
+.tl-name b{font-weight:600}
+.tl-track{position:relative; height:14px; background:var(--grid); border-radius:4px; overflow:hidden}
+.tl-track span{position:absolute; top:0; bottom:0}
+.tl-track .d{background:var(--neg)}
+.tl-track .u{background:var(--pos)}
+.tl-track .clip{right:0; width:14px; background:repeating-linear-gradient(135deg,var(--surface) 0 3px,transparent 3px 6px); opacity:.8}
+.tl-yrs{text-align:right; font-size:13px; white-space:nowrap}
+.tl-axis{display:grid; grid-template-columns:minmax(0,190px) minmax(0,1fr) 96px; gap:12px}
+.tl-axis div{position:relative; height:16px}
+.tl-axis span{position:absolute; transform:translateX(-50%); font-family:var(--f-mono); font-size:10.5px; color:var(--ink-3)}
+@media (max-width:600px){.tl-row,.tl-axis{grid-template-columns:minmax(0,1fr) 92px}.tl-name{grid-column:1 / -1}.tl-axis>div:first-child{display:none}}
+
 .notes{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px}
 @media (max-width:820px){.notes{grid-template-columns:minmax(0,1fr)}}
 .notes ul{margin:8px 0 0; padding-left:18px; display:grid; gap:8px; font-size:13.5px}
@@ -197,6 +223,42 @@ footer{border-top:1px solid var(--line); padding-top:18px; font-size:12px; color
   <div class="stress" id="stress-cards"></div>
 </section>
 
+<!-- ================= RECUPERO ================= -->
+<section id="recupero">
+  <div class="sec-head">
+    <span class="eyebrow">📈 Il tempo del recupero</span>
+    <h2>I crolli finiscono. Ecco quanto ci hanno messo</h2>
+    <p class="muted small">I grandi ribassi del mercato azionario USA dal 1929, più il Giappone. Ogni barra va dal massimo precedente al giorno in cui l'indice è tornato sopra quel massimo: in rosso la discesa, in verde la risalita. 1929 e Giappone sono nel grafico apposta: sono le eccezioni, e vanno viste accanto alla regola.</p>
+  </div>
+  <div class="rec-kpis">
+    <div class="card kpi"><span class="eyebrow">Tempo mediano per tornare ai massimi</span><span class="v num" id="r-med"></span><span class="xs muted">dal picco al nuovo massimo, 9 casi</span></div>
+    <div class="card kpi"><span class="eyebrow">Risalita mediana dal minimo</span><span class="v num" id="r-medup"></span><span class="xs muted">dal punto più basso al nuovo massimo</span></div>
+    <div class="card kpi"><span class="eyebrow">Recuperati in meno di 8 anni</span><span class="v num" id="r-cnt"></span><span class="xs muted">le due eccezioni sono 1929 e Giappone</span></div>
+  </div>
+  <div class="card tl">
+    <div class="tl-head">
+      <h3>Dal picco al nuovo massimo</h3>
+      <div class="seg" role="group" aria-label="Scala del grafico">
+        <button type="button" id="z-8" aria-pressed="true">Zoom 0-8 anni</button>
+        <button type="button" id="z-all" aria-pressed="false">Scala completa</button>
+      </div>
+    </div>
+    <div class="chart-legend"><span><i style="background:var(--neg)"></i>discesa</span><span><i style="background:var(--pos)"></i>risalita fino al vecchio massimo</span></div>
+    <div id="tl-rows"></div>
+    <div class="tl-axis"><div></div><div id="tl-axis"></div><div></div></div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Crollo</th><th class="r">Ribasso</th><th class="r">Discesa</th><th class="r">Risalita</th><th class="r">Velocità di risalita</th></tr></thead>
+      <tbody id="rec-body"></tbody>
+    </table>
+  </div>
+  <div class="verdict">
+    <b>Il dato che conta per te:</b> dal minimo, il mercato è risalito a un ritmo tra il 9% e il 28% l'anno in tutti i casi durati più di un anno, Giappone e 1929 compresi. Lo scenario base del simulatore qui sotto usa il 7%: è più pessimista di qualsiasi recupero storico. Il crollo del 2008 (−57%) è il più simile al tuo scenario e si è chiuso in 5,5 anni; con il pulsante "2008 reale" lo applichi al tuo portafoglio.
+  </div>
+  <p class="xs muted">Indici di prezzo: S&amp;P 500 e Nikkei 225, date di chiusura. Con i dividendi reinvestiti, come fanno i tuoi ETF ad accumulo, i recuperi sono più brevi. Il 2025 non è un vero mercato orso (−19%), ma è il più recente e probabilmente l'hai vissuto. Sono dati del mercato USA, il più forte del secolo: un portafoglio globale come il tuo ha avuto recuperi a volte più lenti (2000-2007) e a volte più rapidi.</p>
+</section>
+
 <!-- ================= PIC vs PAC ================= -->
 <section id="pac">
   <div class="sec-head">
@@ -213,6 +275,7 @@ footer{border-top:1px solid var(--line); padding-top:18px; font-size:12px; color
           <button type="button" data-p="base" aria-pressed="true">−50% prolungato</button>
           <button type="button" data-p="c1929" aria-pressed="false">1929</button>
           <button type="button" data-p="jp" aria-pressed="false">Giappone 1989</button>
+          <button type="button" data-p="g2008" aria-pressed="false">2008 reale</button>
         </div>
       </div>
       <div class="ctl"><label for="i-depth">Ribasso massimo <span class="num" id="o-depth"></span></label><input type="range" id="i-depth" min="20" max="90" step="1"></div>
@@ -282,7 +345,7 @@ footer{border-top:1px solid var(--line); padding-top:18px; font-size:12px; color
   </div>
 </section>
 
-<footer>Fonte: Scalable Capital MCP, portafoglio ix6zLKSoC58GsNDFaC7j5Z, valutazione 2026-10-26 08:46 UTC. Dati storici: Dow Jones 1929-1954, Nikkei 225 1989-2024. Materiale informativo, non consulenza finanziaria.</footer>
+<footer>Fonte: Scalable Capital MCP, portafoglio ix6zLKSoC58GsNDFaC7j5Z, valutazione 2026-10-26 08:46 UTC. Dati storici: S&amp;P 500 e Dow Jones 1929-2025, Nikkei 225 1989-2024 (indici di prezzo). Materiale informativo, non consulenza finanziaria.</footer>
 </div>
 
 <script>
@@ -402,6 +465,7 @@ const PRESETS={
   base:{depth:50,decl:24,bot:12,rec:7,post:7,pac:300,hor:20},
   c1929:{depth:89,decl:34,bot:0,rec:10.5,post:7,pac:300,hor:30},
   jp:{depth:60,decl:36,bot:0,rec:5.5,post:7,pac:300,hor:25},
+  g2008:{depth:57,decl:17,bot:0,rec:23,post:7,pac:300,hor:20},
 };
 const ids=["depth","decl","bot","rec","post","pac","hor"];
 function setPreset(k){
@@ -469,6 +533,42 @@ function drawChart(a,b,o){
   $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="Andamento del valore PIC e PAC">${g}</svg>`;
 }
 function niceStep(s){const p=Math.pow(10,Math.floor(Math.log10(s))),f=s/p;return (f<1.5?1:f<3?2:f<7?5:10)*p;}
+
+// ---------- recupero storico ----------
+const CRASH=[
+ ["1929","Grande Depressione","S&P 500","1929-09-16","1932-06-01","1954-09-22",.862,true],
+ ["1973","Shock petrolifero","S&P 500","1973-01-11","1974-10-03","1980-07-17",.482],
+ ["1987","Lunedì nero","S&P 500","1987-08-25","1987-12-04","1989-07-26",.335],
+ ["1989","Bolla giapponese","Nikkei 225","1989-12-29","2009-03-10","2024-02-22",.819,true],
+ ["2000","Bolla internet","S&P 500","2000-03-24","2002-10-09","2007-05-30",.491],
+ ["2008","Crisi finanziaria","S&P 500","2007-10-09","2009-03-09","2013-03-28",.568],
+ ["2020","Covid","S&P 500","2020-02-19","2020-03-23","2020-08-18",.339],
+ ["2022","Inflazione e tassi","S&P 500","2022-01-03","2022-10-12","2024-01-19",.254],
+ ["2025","Dazi","S&P 500","2025-02-19","2025-04-08","2025-06-27",.189],
+].map(([y,n,ix,pk,tr,rc,dd,ext])=>{const Y=(a,b)=>(new Date(b)-new Date(a))/31557600000;const down=Y(pk,tr),up=Y(tr,rc);
+  return {y,n,ix,pk,tr,rc,dd,ext:!!ext,down,up,tot:down+up,speed:Math.pow(1/(1-dd),1/up)-1};});
+const median=a=>{const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;};
+const dur=y=>y<1?(Math.round(y*12)===1?"1 mese":Math.round(y*12)+" mesi"):y.toLocaleString("it-IT",{minimumFractionDigits:1,maximumFractionDigits:1})+" anni";
+const mmYY=s=>new Date(s).toLocaleDateString("it-IT",{month:"short",year:"numeric"});
+$("r-med").textContent=dur(median(CRASH.map(c=>c.tot)));
+$("r-medup").textContent=dur(median(CRASH.map(c=>c.up)));
+$("r-cnt").textContent=CRASH.filter(c=>c.tot<8).length+" su "+CRASH.length;
+$("rec-body").innerHTML=CRASH.map(c=>`<tr><td>${c.y} · ${c.n}<div class="xs muted">${c.ix} · minimo ${mmYY(c.tr)}, nuovo massimo ${mmYY(c.rc)}</div></td><td class="r num neg">−${pct(c.dd,0)}</td><td class="r num">${dur(c.down)}</td><td class="r num">${dur(c.up)}</td><td class="r num">${c.up>=1?pct(c.speed,0)+"/anno":"<span class='muted'>meno di 1 anno</span>"}</td></tr>`).join("");
+function drawTimeline(max){
+  $("tl-rows").innerHTML=CRASH.map(c=>{
+    const dw=Math.min(c.down,max)/max*100, uw=Math.max(0,Math.min(c.tot,max)-c.down)/max*100, clipped=c.tot>max;
+    return `<div class="tl-row${c.ext?" extreme":""}">
+      <div class="tl-name"><b>${c.y} · ${c.n}</b><span class="xs muted">${c.ix} · −${pct(c.dd,0)}</span></div>
+      <div class="tl-track" role="img" aria-label="${c.y}: discesa ${dur(c.down)}, risalita ${dur(c.up)}"><span class="d" style="left:0;width:${dw}%"></span><span class="u" style="left:${dw}%;width:${uw}%"></span>${clipped?'<span class="clip"></span>':""}</div>
+      <div class="tl-yrs num${c.ext?" neg":""}">${dur(c.tot)}${clipped?" ▸":""}</div>
+    </div>`;}).join("");
+  const step=max>10?5:1;let ax="";for(let t=0;t<=max;t+=step)ax+=`<span style="left:${t/max*100}%">${t}</span>`;
+  $("tl-axis").innerHTML=ax;
+  $("z-8").setAttribute("aria-pressed",max===8);$("z-all").setAttribute("aria-pressed",max!==8);
+}
+$("z-8").addEventListener("click",()=>drawTimeline(8));
+$("z-all").addEventListener("click",()=>drawTimeline(35));
+drawTimeline(8);
 
 setPreset("base");
 </script>
