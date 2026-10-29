@@ -555,6 +555,11 @@ function layout(){
       plan = {planet:p, orbit:p.r + 9 + rmax + 26, phase:4.1, speed:0.06, r:6};
     }
   });
+  // i satelliti sono ricreati a ogni resize: i meteoriti esistenti vanno riagganciati, non duplicati
+  for(let k=meteors.length-1;k>=0;k--){
+    const ns = sats.find(s => s.h === meteors[k].sat.h);
+    if(ns) meteors[k].sat = ns; else meteors.splice(k,1);
+  }
 }
 function resize(){
   const r = cv.getBoundingClientRect();
