@@ -1,0 +1,934 @@
+<title>Galactic Portfolio Command</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: plancia HUD in alto, mappa stellare come viewport principale con l'Holo-Log del Capitano agganciato a destra,
+   console Hyperdrive e Intelligence sotto. Tema unico scuro per scelta: è lo schermo di una cabina di pilotaggio. */
+:root{
+  color-scheme:dark;
+  --void:#04060c; --hull:#0a1120; --hull-2:#0e182b; --line:#1c2b47; --line-2:#2a3d62;
+  --text:#d6e4ff; --muted:#8195bb; --dim:#56698e;
+  --scan:#5ef2ff;           /* accento HUD */
+  --profit:#3dffb0; --loss:#ff4d6d; --warn:#ffb547;
+  --sys-core:#4fd1ff; --sys-usa:#8a9bff; --sys-em:#e8975e; --sys-theme:#b88bff; --sys-stock:#a9bcd9;
+  --gold:#f2c46d; --nebula:#ff5fd2;
+  --f-display:"Oxanium", "Eurostile", "Bank Gothic", ui-sans-serif, system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --glow:0 0 0 1px rgba(94,242,255,.08), 0 0 24px -8px rgba(94,242,255,.35);
+}
+*{box-sizing:border-box}
+html,body{background:var(--void);color:var(--text)}
+body{
+  font-family:var(--f-mono); font-size:13px; line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  padding-block:18px 40px;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(79,209,255,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(184,139,255,.06), transparent 60%),
+    var(--void);
+}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.num{font-variant-numeric:tabular-nums}
+.pos{color:var(--profit)} .neg{color:var(--loss)}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--scan);outline-offset:2px}
+
+/* ---------- HUD ---------- */
+.hud{
+  display:grid; gap:1px; background:var(--line);
+  grid-template-columns: minmax(300px,1.6fr) repeat(4, minmax(0,1fr)) minmax(190px,1.1fr);
+  border:1px solid var(--line); border-radius:6px; overflow:hidden; box-shadow:var(--glow);
+}
+.hud > div{background:linear-gradient(180deg,var(--hull-2),var(--hull)); padding:12px 14px; min-width:0}
+.ship{display:flex; gap:12px; align-items:center}
+.ship svg{flex:none}
+.ship h1{font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.04em;margin:0;line-height:1.1;text-wrap:balance}
+.ship .cls{font-family:var(--f-display);color:var(--scan);font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+.meter{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:6px}
+.meter > i{display:block;height:100%;background:var(--scan);box-shadow:0 0 8px var(--scan)}
+.stat .v{font-family:var(--f-display);font-size:20px;font-weight:600;margin-top:2px;white-space:nowrap}
+.stat .s{font-size:11px;color:var(--muted)}
+.shield .v{display:flex;align-items:baseline;gap:8px}
+.shield .bar{display:flex;gap:2px;margin-top:6px}
+.shield .bar i{flex:1;height:8px;border-radius:1px;background:var(--line)}
+.shield .bar i.on{background:var(--profit);box-shadow:0 0 6px rgba(61,255,176,.6)}
+.status{display:flex;flex-direction:column;justify-content:center;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-display);font-weight:700;letter-spacing:.12em;font-size:13px;padding:6px 10px;border-radius:4px;border:1px solid currentColor;width:max-content;max-width:100%}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px currentColor}
+.pill.green{color:var(--profit)} .pill.yellow{color:var(--warn)} .pill.red{color:var(--loss);animation:blink 0.9s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+
+/* ---------- main deck ---------- */
+.deck{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+.panel{background:linear-gradient(180deg,var(--hull-2),var(--hull));border:1px solid var(--line);border-radius:6px;min-width:0}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+.panel-h h2{font-family:var(--f-display);font-size:14px;letter-spacing:.14em;text-transform:uppercase;margin:0;font-weight:600}
+.map-wrap{position:relative}
+#map{display:block;width:100%;height:clamp(440px,64vh,700px);cursor:crosshair;touch-action:manipulation}
+.map-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chip{font-size:11px;padding:4px 8px;border:1px solid var(--line-2);border-radius:3px;color:var(--muted);white-space:nowrap}
+.chip b{color:var(--text);font-weight:600}
+.btn{
+  cursor:pointer;background:rgba(94,242,255,.06);border:1px solid var(--line-2);border-radius:4px;
+  padding:7px 11px;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  transition:background .15s,border-color .15s, box-shadow .15s;
+}
+.btn:hover{border-color:var(--scan);box-shadow:0 0 14px -4px var(--scan)}
+.btn.alert{border-color:rgba(255,77,109,.55);color:#ffc2cd;background:rgba(255,77,109,.08)}
+.btn.alert[aria-pressed="true"]{background:var(--loss);color:#1a0207;border-color:var(--loss)}
+.btn.primary{background:var(--scan);color:#021216;border-color:var(--scan)}
+.btn.primary:hover{box-shadow:0 0 22px -2px var(--scan)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.lg{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.tip{
+  position:absolute;pointer-events:none;z-index:3;min-width:190px;max-width:260px;
+  background:rgba(6,12,24,.94);border:1px solid var(--scan);border-radius:4px;padding:8px 10px;font-size:12px;
+  box-shadow:0 0 18px -6px var(--scan)
+}
+.tip .t{font-family:var(--f-display);font-weight:700;letter-spacing:.06em}
+.tip .r{display:flex;justify-content:space-between;gap:12px;color:var(--muted)}
+.tip .r b{color:var(--text);font-weight:500}
+.alarm{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px rgba(255,30,60,.45);animation:alarm 1.2s ease-in-out infinite}
+@keyframes alarm{50%{box-shadow:inset 0 0 60px 6px rgba(255,30,60,.18)}}
+.warn-banner{
+  position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:2;pointer-events:none;
+  font-family:var(--f-display);font-weight:700;letter-spacing:.2em;color:var(--loss);font-size:13px;
+  border:1px solid var(--loss);padding:5px 12px;background:rgba(30,2,8,.75);white-space:nowrap
+}
+
+/* ---------- holo-log ---------- */
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.holo{position:relative;overflow:hidden}
+.holo::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(94,242,255,.035) 0 1px,transparent 1px 3px)}
+.holo-body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.holo-title{font-family:var(--f-display);font-size:22px;font-weight:700;letter-spacing:.04em;line-height:1.1;text-wrap:balance}
+.holo-sub{color:var(--muted);font-size:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+.kv dt{color:var(--muted);font-size:12px}
+.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.decode{border-left:2px solid var(--scan);padding:6px 10px;background:rgba(94,242,255,.05);font-size:12px;color:var(--text)}
+.decode.bad{border-color:var(--loss);background:rgba(255,77,109,.07)}
+.decode.ghost{border-color:var(--nebula);background:rgba(255,95,210,.06)}
+.sys-list{display:flex;flex-direction:column;gap:2px}
+
+/* ---------- roster ---------- */
+.roster{max-height:360px;overflow:auto}
+.row{
+  width:100%;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:4px 10px;align-items:center;
+  text-align:left;background:none;border:0;border-bottom:1px solid rgba(28,43,71,.6);padding:7px 12px;cursor:pointer
+}
+.row:hover,.row[aria-current="true"]{background:rgba(94,242,255,.07)}
+.row .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm b{font-weight:600;letter-spacing:.04em}
+.row .nm small{color:var(--muted);margin-left:6px}
+.row .rt{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.row .wb{grid-column:2 / 4;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.row .wb i{display:block;height:100%}
+
+/* ---------- lower consoles ---------- */
+.consoles{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px}
+.console-body{padding:12px;display:flex;flex-direction:column;gap:12px}
+.controls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.field input[type=number]{width:120px;background:var(--void);border:1px solid var(--line-2);border-radius:4px;color:var(--text);padding:6px 8px;font:inherit}
+.field input[type=range]{width:180px;max-width:100%;accent-color:var(--scan)}
+.scen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.scen > div{border:1px solid var(--line);border-radius:4px;padding:8px 10px;min-width:0}
+.scen .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.scen .val{font-family:var(--f-display);font-size:19px;font-weight:600;white-space:nowrap}
+.scen .cls{font-size:11px;color:var(--scan)}
+.chart{width:100%;height:auto;display:block;max-width:100%}
+.foot{font-size:11px;color:var(--dim)}
+.intel{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.intel li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.intel .ic{font-family:var(--f-display);font-weight:700;font-size:11px;height:22px;border-radius:3px;display:grid;place-items:center;border:1px solid currentColor}
+.intel h3{margin:0 0 2px;font-family:var(--f-display);font-size:13px;letter-spacing:.06em;font-weight:600}
+.intel p{margin:0;color:var(--muted);font-size:12px;max-width:62ch}
+.intel p b{color:var(--text);font-weight:500}
+footer{color:var(--dim);font-size:11px;max-width:100ch}
+
+@media (max-width: 1100px){
+  .hud{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .hud .ship{grid-column:1 / -1}
+  .deck{grid-template-columns:minmax(0,1fr)}
+  .consoles{grid-template-columns:minmax(0,1fr)}
+  .roster{max-height:340px}
+}
+@media (max-width: 560px){
+  .hud{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hud .status{grid-column:1 / -1}
+  #map{height:520px}
+  .scen{grid-template-columns:minmax(0,1fr)}
+  .stat .v{font-size:17px}
+}
+@media (prefers-reduced-motion: reduce){
+  .pill.red,.alarm{animation:none}
+}
+</style>
+
+<div class="wrap">
+  <section class="hud" aria-label="Stato della flotta">
+    <div class="ship">
+      <svg id="ship-svg" width="78" height="46" viewBox="0 0 78 46" aria-hidden="true"></svg>
+      <div style="min-width:0;flex:1">
+        <div class="eyebrow">Plancia · La mia pensione</div>
+        <h1>Galactic Portfolio Command</h1>
+        <div class="cls" id="ship-class">—</div>
+        <div class="meter" title="Avanzamento verso la classe successiva"><i id="ship-meter" style="width:0"></i></div>
+        <div class="stat"><span class="s" id="ship-next"></span></div>
+      </div>
+    </div>
+    <div class="stat"><div class="eyebrow">Tesoro della flotta</div><div class="v num" id="h-total">—</div><div class="s" id="h-total-s">controvalore</div></div>
+    <div class="stat"><div class="eyebrow">Bottino totale</div><div class="v num" id="h-max">—</div><div class="s" id="h-max-s">dall'acquisto</div></div>
+    <div class="stat"><div class="eyebrow">Da inizio anno</div><div class="v num" id="h-ytd">—</div><div class="s">YTD, € assoluti</div></div>
+    <div class="stat"><div class="eyebrow">Oggi</div><div class="v num" id="h-d1">—</div><div class="s" id="h-d1-s">intraday</div></div>
+    <div class="status">
+      <div class="shield stat">
+        <div class="eyebrow">Scudo deflettore</div>
+        <div class="v num"><span id="h-shield">—</span></div>
+        <div class="bar" id="shield-bar" aria-hidden="true"></div>
+        <div class="s">quota di capitale in posizioni in utile</div>
+      </div>
+      <span class="pill green" id="h-pill" role="status">CONDIZIONE VERDE</span>
+    </div>
+  </section>
+
+  <div class="deck">
+    <section class="panel">
+      <div class="panel-h">
+        <h2>Mappa stellare</h2>
+        <div class="map-tools">
+          <span class="chip">Meteoriti abbattuti <b class="num" id="score">0</b></span>
+          <span class="chip">Minacce attive <b class="num" id="threats">0</b></span>
+          <button class="btn alert" id="drill" aria-pressed="false" title="Simula un calo del 30% su tutto l'azionario">Esercitazione Red Alert −30%</button>
+        </div>
+      </div>
+      <div class="map-wrap" id="map-wrap">
+        <canvas id="map" role="img" aria-label="Mappa stellare del portafoglio: ogni pianeta è un gruppo di asset, ogni satellite una posizione. L'elenco completo è nel registro della flotta."></canvas>
+        <div class="tip" id="tip" hidden></div>
+        <div class="alarm" id="alarm" hidden></div>
+        <div class="warn-banner" id="banner" hidden>RED ALERT · ESERCITAZIONE</div>
+      </div>
+      <div class="legend">
+        <span><i class="lg" style="background:var(--sys-core)"></i>Pianeta = sistema di asset · area ∝ peso</span>
+        <span><i class="lg" style="background:#cfe;width:6px;height:6px"></i>Satellite = posizione · area ∝ peso</span>
+        <span><i class="lg" style="background:var(--profit);box-shadow:0 0 6px var(--profit)"></i>In utile: scudo verde, flusso di estrazione</span>
+        <span><i class="lg" style="background:var(--loss);box-shadow:0 0 6px var(--loss)"></i>In perdita: meteoriti in arrivo, clicca per abbatterli</span>
+        <span><i class="lg" style="border:1px dashed var(--scan);background:none"></i>Nave in costruzione: PAC attivo senza quote</span>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel holo" aria-live="polite">
+        <div class="panel-h"><h2>Holo-Log del Capitano</h2><span class="eyebrow" id="holo-tag">sistema</span></div>
+        <div class="holo-body" id="holo"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h2>Registro della flotta</h2><span class="eyebrow" id="roster-count"></span></div>
+        <div class="roster" id="roster"></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="consoles">
+    <section class="panel">
+      <div class="panel-h"><h2>Hyperdrive · proiezione</h2><span class="eyebrow">simulazione, non previsione</span></div>
+      <div class="console-body">
+        <div class="controls">
+          <div class="field">
+            <label for="hd-years">Salto temporale: <span id="hd-years-v" class="num">15</span> anni</label>
+            <input type="range" id="hd-years" min="1" max="30" value="15">
+          </div>
+          <div class="field">
+            <label for="hd-monthly">Carburante mensile (€)</label>
+            <input type="number" id="hd-monthly" min="0" step="50" value="500" inputmode="numeric">
+          </div>
+          <button class="btn primary" id="hd-go">Attiva Hyperdrive</button>
+        </div>
+        <div class="scen" id="hd-scen"></div>
+        <svg class="chart" id="hd-chart" viewBox="0 0 560 170" role="img" aria-label="Traiettorie del portafoglio nei tre scenari"></svg>
+        <div class="foot">Rendimenti annui costanti e nominali (3% / 6% / 8%), versamento a inizio di ogni mese, prima di tasse, costi e inflazione. Il punto di partenza è il controvalore attuale. Serve a vedere l'ordine di grandezza, non a prevedere.</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-h"><h2>Rapporto di intelligence</h2><span class="eyebrow">quello che la mappa mostra</span></div>
+      <div class="console-body"><ul class="intel" id="intel"></ul></div>
+    </section>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+/* ======================= DATI (Scalable Capital MCP, istantanea) ======================= */
+const SNAP = {
+  portfolio: "La mia pensione",
+  asOf: "29 ott 2026, 13:52 UTC",
+  total: 40771.36,
+  perf: { d1:-74.98, w1:109.10, m1:295.78, m3:1816.12, m6:3793.13, y1:5139.62, ytd:5146.71, max:6724.91 },
+  cash: 0, crypto: 0,
+  plan: { isin:"IE000BI8OT95", name:"Amundi Core MSCI World (Acc)", amount:500 },
+  cryptoGhost: "Unico segnale registrato: un acquisto BTC del 6 nov 2024, annullato."
+};
+// [isin, nome, sigla, sistema, quantità, prezzo mid €, PnL € dall'acquisto, PnL % dall'acquisto, prezzo YTD %, oggi %, tipo]
+const RAW = [
+  ["LU2903252349","Scalable MSCI AC World Xtrackers (Acc)","ACWI","core",2582.259899,12.324,5292.1428,0.1995,0.1827,-0.0019,"ETF"],
+  ["IE00BP3QZ825","iShares Edge MSCI World Momentum Factor (Acc)","MOMENTUM","core",13,101.04,2.57,0.0020,0.2107,-0.0041,"ETF"],
+  ["IE00B4L5Y983","iShares Core MSCI World (Acc)","MSCI WORLD","core",0.539,131.7025,16.0803,0.2928,0.1787,0.0006,"ETF"],
+  ["IE00BFMXXD54","Vanguard S&P 500 (Acc)","S&P VANGUARD","usa",14,133.995,549.095,0.4138,0.1881,-0.0014,"ETF"],
+  ["IE00B5BMR087","iShares Core S&P 500 (Acc)","S&P ISHARES","usa",0.64537,747.16,108.2083,0.2892,0.1884,-0.0016,"ETF"],
+  ["IE00B3ZW0K18","iShares S&P 500 EUR Hedged (Acc)","S&P HEDGED","usa",0.308,157.8925,13.8048,0.3962,0.1038,-0.0041,"ETF"],
+  ["IE00BTJRMP35","Xtrackers MSCI Emerging Markets (Acc)","EM XTRACKERS","em",24.438308,78.191,282.4601,0.1734,0.2205,-0.0097,"ETF"],
+  ["LU1681045370","Amundi MSCI Emerging Markets Swap EUR (Acc)","EM AMUNDI","em",93,7.4516,196.2274,0.3950,0.2141,-0.0086,"ETF"],
+  ["IE00BKM4GZ66","iShares Core MSCI Emerging Markets IMI (Acc)","EM IMI","em",8.304,45.958,53.3792,0.1626,0.1993,-0.0089,"ETF"],
+  ["IE00BZCQB185","iShares MSCI India (Acc)","INDIA","em",14.981496,7.481,-17.9034,-0.1377,-0.0947,0.0178,"ETF"],
+  ["LU0328476410","Xtrackers S&P Select Frontier Swap (Acc)","FRONTIER","em",0.989,26.1675,5.8997,0.2953,0.0882,0.0044,"ETF"],
+  ["LU0514694370","Xtrackers MSCI Malaysia (Acc)","MALAYSIA","em",1.834,12.496,2.9277,0.1465,0.0440,0.0026,"ETF"],
+  ["IE00BGV5VN51","Xtrackers Artificial Intelligence & Big Data (Acc)","AI & DATA","theme",1.443179,214.525,135.1762,0.7745,0.3798,0,"ETF"],
+  ["IE00BYZK4552","iShares Automation & Robotics (Acc)","ROBOTICS","theme",8.325875,19.169,59.5787,0.5960,0.3766,-0.0118,"ETF"],
+  ["IE00BYXG2H39","iShares Nasdaq US Biotechnology (Acc)","BIOTECH","theme",12.075295,9.671,41.7923,0.5572,0.3541,0.0148,"ETF"],
+  ["IE00BYZK4669","iShares Ageing Population (Acc)","AGEING","theme",11.77,9.5595,27.5118,0.3237,0.1685,0.0119,"ETF"],
+  ["NL0011585146","Ferrari","RACE","stock",1.016206,357,-30.8507,-0.0784,0.1149,0.0119,"Azione"],
+  ["US5951121038","Micron Technology","MU","stock",0.350839,850.55,-51.7918,-0.1480,2.3721,-0.0212,"Azione"],
+  ["US70450Y1038","PayPal Holdings","PYPL","stock",3.022873,51.405,6.8606,0.0462,0.0157,0.0185,"Azione"],
+  ["US84615Q1031","SpaceX","SPACEX","stock",1,127.9,-2.68,-0.0205,-0.0937,-0.0118,"Azione"],
+  ["IT0004764699","Brunello Cucinelli","BC","stock",1.009313,85.51,3.0163,0.0362,-0.1318,0.0104,"Azione"],
+  ["IE00B4ND3602","iShares Physical Gold ETC","GOLD","gold",4,70.1625,5.16,0.0187,-0.0349,-0.0087,"ETC"]
+];
+const H = RAW.map(a => {
+  const h = {id:a[0], isin:a[0], name:a[1], sign:a[2], sys:a[3], qty:a[4], price:a[5], pnl:a[6], pnlPct:a[7], ytd:a[8], d1:a[9], kind:a[10]};
+  h.value = h.qty * h.price; h.cost = h.value - h.pnl; return h;
+});
+const TOTAL = H.reduce((s,h)=>s+h.value,0);
+H.forEach(h => h.w = h.value / TOTAL);
+
+const SYS = {
+  core:  {label:"Nucleo Globale",       sub:"ETF azionari mondo",       color:"#4fd1ff", pos:[.50,.54], kind:"planet"},
+  usa:   {label:"Sistema S&P",          sub:"ETF S&P 500",              color:"#8a9bff", pos:[.17,.27], kind:"planet"},
+  em:    {label:"Cintura Emergente",    sub:"ETF mercati emergenti",    color:"#e8975e", pos:[.83,.27], kind:"planet"},
+  theme: {label:"Laboratori Tematici",  sub:"ETF tematici",             color:"#b88bff", pos:[.83,.80], kind:"planet"},
+  stock: {label:"Avamposti",            sub:"azioni singole",           color:"#a9bcd9", pos:[.17,.80], kind:"planet"},
+  gold:  {label:"Stazione Oro",         sub:"materie prime difensive",  color:"#f2c46d", pos:[.50,.92], kind:"station"},
+  crypto:{label:"Nebulosa Crypto",      sub:"criptovalute",             color:"#ff5fd2", pos:[.50,.10], kind:"nebula"}
+};
+Object.entries(SYS).forEach(([k,s]) => {
+  s.key = k; s.items = H.filter(h=>h.sys===k).sort((a,b)=>b.value-a.value);
+  s.value = s.items.reduce((t,h)=>t+h.value,0); s.w = s.value/TOTAL;
+  s.pnl = s.items.reduce((t,h)=>t+h.pnl,0);
+});
+
+const CLASSES = [
+  {name:"Navetta",       min:0},
+  {name:"Corvetta",      min:5000},
+  {name:"Fregata",       min:15000},
+  {name:"Incrociatore",  min:35000},
+  {name:"Corazzata",     min:75000},
+  {name:"Ammiraglia",    min:150000},
+  {name:"Dreadnought",   min:300000}
+];
+const SHOCK = -0.30;
+
+/* ======================= HELPERS ======================= */
+const eur = new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",useGrouping:"always"});
+const eur0 = new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0,useGrouping:"always"});
+const n2 = new Intl.NumberFormat("it-IT",{maximumFractionDigits:6});
+const pct = (x,d=1) => (x>0?"+":x<0?"−":"") + Math.abs(x*100).toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d}) + "%";
+const pctU = (x,d=1) => (x*100).toLocaleString("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d}) + "%";
+const sEur = x => (x>0?"+":x<0?"−":"") + eur.format(Math.abs(x));
+const cls = x => x>0 ? "pos" : x<0 ? "neg" : "";
+const arrow = x => x>0 ? "▲" : x<0 ? "▼" : "■";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+function rgba(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; }
+function rand(a,b){ return a + Math.random()*(b-a); }
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ======================= STATE ======================= */
+const state = { drill:false, selected:"sys:core", hover:null, score:0, warp:0, warpUntil:0 };
+
+function eff(h){
+  if(!state.drill) return {value:h.value, pnl:h.pnl, pct:h.pnlPct};
+  const v = h.value * (1 + (h.sys==="gold" ? 0 : SHOCK));
+  return {value:v, pnl:v-h.cost, pct:(v-h.cost)/h.cost};
+}
+function fleetTotals(){
+  let value=0, pnl=0, inProfit=0;
+  H.forEach(h => { const e=eff(h); value+=e.value; pnl+=e.pnl; if(e.pnl>=0) inProfit+=e.value; });
+  return {value, pnl, shield: inProfit/value};
+}
+function classFor(v){
+  let i=0; CLASSES.forEach((c,k)=>{ if(v>=c.min) i=k; });
+  const cur=CLASSES[i], nxt=CLASSES[i+1];
+  return {i, cur, nxt, prog: nxt ? (v-cur.min)/(nxt.min-cur.min) : 1};
+}
+
+/* ======================= HUD ======================= */
+function shipSVG(level, alert){
+  const c = alert ? "#ff4d6d" : "#5ef2ff";
+  let s = `<defs><filter id="gl"><feGaussianBlur stdDeviation="1.4"/></filter></defs>`;
+  s += `<g stroke="${c}" fill="${rgba(c,.12)}" stroke-width="1.2" stroke-linejoin="round">`;
+  s += `<path d="M6 23 L30 13 L58 16 L72 23 L58 30 L30 33 Z"/>`;
+  s += `<path d="M30 13 L38 4 L46 15 M30 33 L38 42 L46 31" fill="none"/>`;
+  s += `<rect x="44" y="20" width="12" height="6" rx="1" fill="${rgba(c,.35)}"/>`;
+  s += `</g><path d="M2 21 L6 23 L2 25" stroke="${c}" fill="none" filter="url(#gl)"/>`;
+  // scorte: una per classe raggiunta oltre la prima
+  for(let k=0;k<level;k++){
+    const x = 8 + (k%3)*9, y = k<3 ? 6 : 40;
+    s += `<path d="M${x} ${y} l7 -2.5 l-2 2.5 l2 2.5 Z" fill="${c}" opacity=".8"/>`;
+  }
+  return s;
+}
+function renderHUD(){
+  const t = fleetTotals();
+  const c = classFor(t.value);
+  const alertReal = SNAP.perf.d1/SNAP.total <= -0.02 || SNAP.perf.m1/SNAP.total <= -0.05;
+  const red = state.drill || alertReal;
+  const yellow = !red && (t.shield < 0.85 || SNAP.perf.m1 < 0);
+  $("ship-svg").innerHTML = shipSVG(c.i, red);
+  $("ship-class").textContent = "Classe " + c.cur.name;
+  $("ship-meter").style.width = (c.prog*100).toFixed(1)+"%";
+  $("ship-meter").style.background = red ? "var(--loss)" : "";
+  $("ship-next").textContent = c.nxt ? `prossima: ${c.nxt.name} a ${eur0.format(c.nxt.min)} · ${pctU(c.prog,0)}` : "classe massima";
+  $("h-total").textContent = eur.format(t.value);
+  $("h-total-s").textContent = state.drill ? `simulato, ${sEur(t.value-TOTAL)}` : `${H.length} posizioni · liquidità 0 €`;
+  const mx = state.drill ? t.pnl : SNAP.perf.max;
+  $("h-max").innerHTML = `<span class="${cls(mx)}">${arrow(mx)} ${sEur(mx)}</span>`;
+  $("h-max-s").textContent = state.drill ? "dall'acquisto, scenario −30%" : "dall'acquisto (MAX)";
+  $("h-ytd").innerHTML = `<span class="${cls(SNAP.perf.ytd)}">${arrow(SNAP.perf.ytd)} ${sEur(SNAP.perf.ytd)}</span>`;
+  $("h-d1").innerHTML = `<span class="${cls(SNAP.perf.d1)}">${arrow(SNAP.perf.d1)} ${sEur(SNAP.perf.d1)}</span>`;
+  $("h-d1-s").textContent = `intraday · ${pct(SNAP.perf.d1/SNAP.total,2)}`;
+  $("h-shield").textContent = pctU(t.shield,1);
+  $("h-shield").className = t.shield<0.5 ? "neg" : t.shield<0.85 ? "" : "pos";
+  const segs = 20, on = Math.round(t.shield*segs);
+  $("shield-bar").innerHTML = Array.from({length:segs},(_,k)=>`<i class="${k<on?"on":""}" style="${k<on && t.shield<0.5?"background:var(--loss);box-shadow:0 0 6px var(--loss)":""}"></i>`).join("");
+  const pill = $("h-pill");
+  pill.className = "pill " + (red?"red":yellow?"yellow":"green");
+  pill.textContent = red ? "RED ALERT" : yellow ? "ALLERTA GIALLA" : "CONDIZIONE VERDE";
+  $("alarm").hidden = !state.drill || REDUCED;
+  $("banner").hidden = !state.drill;
+}
+
+/* ======================= HOLO-LOG ======================= */
+function decodeLine(h){
+  const e = eff(h);
+  if(e.pnl < 0){
+    const n = meteorTarget(h);
+    return `<div class="decode bad">Sotto attacco: sciame di ${n} meteorit${n===1?"e":"i"}. La posizione vale ${eur.format(Math.abs(e.pnl))} meno di quanto è costata. Abbattere i meteoriti non cambia il numero: lo registra.</div>`;
+  }
+  const speed = e.pct > .3 ? "a pieno regime" : e.pct > .1 ? "a regime" : "al minimo";
+  return `<div class="decode">Scudo verde, estrazione ${speed}: ${sEur(e.pnl)} sopra il costo di carico.</div>`;
+}
+function holoAsset(h){
+  const e = eff(h), s = SYS[h.sys];
+  $("holo-tag").textContent = h.kind;
+  $("holo").innerHTML = `
+    <div>
+      <div class="eyebrow" style="color:${s.color}">${esc(s.label)}</div>
+      <div class="holo-title">${esc(h.sign)}</div>
+      <div class="holo-sub">${esc(h.name)}</div>
+    </div>
+    <dl class="kv num">
+      <dt>ISIN</dt><dd>${h.isin}</dd>
+      <dt>Quantità</dt><dd>${n2.format(h.qty)}</dd>
+      <dt>Prezzo (mid)</dt><dd>${eur.format(h.price)}</dd>
+      <dt>Controvalore</dt><dd>${eur.format(e.value)}</dd>
+      <dt>Peso nel portafoglio</dt><dd>${pctU(h.w,2)}</dd>
+      <dt>Costo di carico</dt><dd>${eur.format(h.cost)}</dd>
+      <dt>PnL dall'acquisto</dt><dd class="${cls(e.pnl)}">${arrow(e.pnl)} ${sEur(e.pnl)} · ${pct(e.pct)}</dd>
+      <dt>Prezzo da inizio anno</dt><dd class="${cls(h.ytd)}">${pct(h.ytd)}</dd>
+      <dt>Prezzo oggi</dt><dd class="${cls(h.d1)}">${pct(h.d1,2)}</dd>
+    </dl>
+    ${decodeLine(h)}
+    ${state.drill ? `<div class="foot">Valori simulati con ${pct(h.sys==="gold"?0:SHOCK,0)} sul prezzo. Costo di carico reale.</div>` : ""}`;
+}
+function holoSystem(k){
+  const s = SYS[k];
+  $("holo-tag").textContent = s.kind === "planet" ? "sistema" : s.kind === "station" ? "stazione" : "nebulosa";
+  if(k === "crypto"){
+    $("holo").innerHTML = `
+      <div><div class="eyebrow" style="color:${s.color}">Settore inesplorato</div>
+      <div class="holo-title">${s.label}</div><div class="holo-sub">nessuna flotta in questo settore</div></div>
+      <dl class="kv num"><dt>Controvalore</dt><dd>0,00 €</dd><dt>Posizioni</dt><dd>0</dd><dt>Peso</dt><dd>0,00%</dd></dl>
+      <div class="decode ghost">La nebulosa è disegnata vuota di proposito: nel portafoglio non ci sono crypto. ${esc(SNAP.cryptoGhost)}</div>`;
+    return;
+  }
+  let pnl=0, val=0;
+  s.items.forEach(h=>{ const e=eff(h); pnl+=e.pnl; val+=e.value; });
+  const losers = s.items.filter(h=>eff(h).pnl<0).length;
+  const rows = s.items.map(h => {
+    const e = eff(h);
+    return `<button class="row" data-id="${h.id}" style="padding-inline:0">
+      <i class="lg" style="background:${s.color}"></i>
+      <span class="nm"><b>${esc(h.sign)}</b><small>${pctU(h.w,1)}</small></span>
+      <span class="rt ${cls(e.pnl)}">${arrow(e.pnl)} ${pct(e.pct)}</span></button>`;
+  }).join("");
+  const planNote = k === "core" ? `<div class="decode ghost">Nave in costruzione: il PAC attivo (${eur0.format(SNAP.plan.amount)}/mese) punta su ${esc(SNAP.plan.name)}, posizione ancora a zero.</div>` : "";
+  $("holo").innerHTML = `
+    <div><div class="eyebrow" style="color:${s.color}">${esc(s.sub)}</div>
+    <div class="holo-title">${esc(s.label)}</div>
+    <div class="holo-sub">${s.items.length} posizion${s.items.length===1?"e":"i"} · ${losers ? losers+" sotto attacco" : "nessuna minaccia"}</div></div>
+    <dl class="kv num">
+      <dt>Controvalore</dt><dd>${eur.format(val)}</dd>
+      <dt>Peso nel portafoglio</dt><dd>${pctU(s.w,1)}</dd>
+      <dt>PnL dall'acquisto</dt><dd class="${cls(pnl)}">${arrow(pnl)} ${sEur(pnl)} · ${pct(pnl/(val-pnl))}</dd>
+    </dl>
+    <div class="sys-list">${rows}</div>${planNote}`;
+  $("holo").querySelectorAll(".row").forEach(b => b.addEventListener("click", () => select(b.dataset.id)));
+}
+function holoPlan(){
+  $("holo-tag").textContent = "cantiere";
+  $("holo").innerHTML = `
+    <div><div class="eyebrow" style="color:var(--scan)">Nave in costruzione</div>
+    <div class="holo-title">AMUNDI WORLD</div><div class="holo-sub">${esc(SNAP.plan.name)}</div></div>
+    <dl class="kv num"><dt>ISIN</dt><dd>${SNAP.plan.isin}</dd><dt>Piano di accumulo</dt><dd>${eur0.format(SNAP.plan.amount)} / mese</dd><dt>Quote possedute</dt><dd>0</dd><dt>Controvalore</dt><dd>0,00 €</dd></dl>
+    <div class="decode ghost">Il cantiere riceve carburante ogni mese ma la nave non è ancora varata: nessuna quota risulta in portafoglio a questa data.</div>`;
+}
+function select(id){
+  state.selected = id;
+  if(id.startsWith("sys:")) holoSystem(id.slice(4));
+  else if(id === "plan") holoPlan();
+  else holoAsset(H.find(h=>h.id===id));
+  document.querySelectorAll("#roster .row").forEach(r => r.setAttribute("aria-current", r.dataset.id===id ? "true" : "false"));
+}
+
+/* ======================= ROSTER ======================= */
+function renderRoster(){
+  const list = [...H].sort((a,b)=>b.value-a.value);
+  $("roster-count").textContent = `${list.length} posizioni`;
+  $("roster").innerHTML = list.map(h => {
+    const e = eff(h), s = SYS[h.sys];
+    return `<button class="row" data-id="${h.id}" aria-current="${state.selected===h.id}">
+      <i class="lg" style="background:${s.color}"></i>
+      <span class="nm"><b>${esc(h.sign)}</b><small>${esc(h.name)}</small></span>
+      <span class="rt"><span class="num">${eur0.format(e.value)}</span> <span class="${cls(e.pnl)}">${arrow(e.pnl)}${pct(e.pct)}</span></span>
+      <span class="wb"><i style="width:${Math.max(.6,h.w*100/0.8)}%;background:${s.color}"></i></span>
+    </button>`;
+  }).join("");
+  $("roster").querySelectorAll(".row").forEach(b => {
+    b.addEventListener("click", () => select(b.dataset.id));
+    b.addEventListener("mouseenter", () => state.rosterHover = b.dataset.id);
+    b.addEventListener("mouseleave", () => state.rosterHover = null);
+  });
+}
+
+/* ======================= MAPPA (Canvas) ======================= */
+const cv = $("map"), ctx = cv.getContext("2d"), wrap = $("map-wrap");
+let W=0, HH=0, DPR=1, BASE=0;
+const stars = Array.from({length:240}, () => ({x:Math.random(), y:Math.random(), z:rand(.2,1), tw:rand(0,6.28)}));
+const planets = {}, sats = [];
+let plan = null;
+const meteors = [], parts = [], floats = [];
+
+function layout(){
+  BASE = Math.min(W, HH);
+  const coreR = BASE*0.095;
+  const S = coreR / Math.sqrt(SYS.core.w);           // stessa scala di area per tutti i pianeti
+  sats.length = 0;
+  Object.values(SYS).forEach(s => {
+    const p = planets[s.key] = planets[s.key] || {sys:s, lights:[]};
+    p.x = s.pos[0]*W; p.y = s.pos[1]*HH;
+    if(s.kind === "nebula"){ p.r = BASE*0.07; return; }
+    p.r = s.kind === "station" ? Math.max(11, S*Math.sqrt(s.w)) : Math.max(12, S*Math.sqrt(s.w));
+    if(!p.lights.length) p.lights = Array.from({length:26}, () => { const a=rand(-.3,1.9), d=Math.sqrt(Math.random())*.85; return {a, d, ph:rand(0,6.28)}; });
+    // satelliti: area ∝ peso nel portafoglio, scala unica per tutta la mappa
+    const items = s.items.map(h => ({h, r:Math.max(3.5, 0.38*S*Math.sqrt(h.w))}));
+    const rmax = items.length ? items[0].r : 0;
+    items.forEach((it,i) => {
+      const ring = s.kind==="station" ? 0 : i % 2;
+      it.orbit = p.r + 9 + rmax + ring*13;
+      it.planet = p;
+      it.phase = (i*2.399) % 6.283;
+      const e = it.h.pnlPct;
+      it.speed = (e >= 0 ? 0.10 + 0.22*clamp(e,0,1) : 0.05) * (i%2 ? -1 : 1);
+      it.flow = rand(0,1);
+      sats.push(it);
+    });
+    if(s.key === "core"){
+      plan = {planet:p, orbit:p.r + 9 + rmax + 26, phase:4.1, speed:0.06, r:6};
+    }
+  });
+}
+function resize(){
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = r.width; HH = r.height;
+  cv.width = Math.round(W*DPR); cv.height = Math.round(HH*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  layout();
+}
+new ResizeObserver(resize).observe(cv);
+
+/* ---- meteoriti ---- */
+function meteorTarget(h){
+  const e = eff(h);
+  if(e.pnl >= 0) return 0;
+  return Math.min(5, 1 + Math.floor(Math.abs(e.pct)*20));
+}
+function newMeteor(sat){
+  return {sat, ang:rand(0,6.283), dist:rand(sat.r+45, sat.r+90), speed:rand(5,11), size:rand(2.4,4.2), rot:rand(0,6), spin:rand(-2,2),
+          verts:Array.from({length:7},()=>rand(.65,1.15)), dead:false, respawn:0};
+}
+function syncMeteors(t){
+  let active = 0;
+  sats.forEach(s => {
+    const want = meteorTarget(s.h);
+    const mine = meteors.filter(m => m.sat === s);
+    for(let k=mine.length; k<want; k++) meteors.push(newMeteor(s));
+    if(mine.length > want) mine.slice(want).forEach(m => meteors.splice(meteors.indexOf(m),1));
+  });
+  meteors.forEach(m => { if(m.dead && t > m.respawn){ Object.assign(m, newMeteor(m.sat)); } if(!m.dead) active++; });
+  return active;
+}
+function burst(x,y,color,n){
+  for(let k=0;k<n;k++){ const a=rand(0,6.283), v=rand(20,90); parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(.4,.9),max:.9,color}); }
+}
+
+/* ---- disegno ---- */
+function drawStars(t, dt){
+  const cx=W/2, cy=HH/2;
+  const warping = state.warpUntil > t;
+  const wp = warping ? 1 - (state.warpUntil - t)/1.4 : 0;
+  for(const s of stars){
+    let x = s.x*W, y = s.y*HH;
+    if(!REDUCED && !warping){ x = (x + t*4*s.z) % W; }
+    const a = 0.35 + 0.45*s.z*(0.6+0.4*Math.sin(t*1.7+s.tw));
+    if(warping){
+      const k = Math.sin(wp*Math.PI) * 1.6 * s.z;
+      ctx.strokeStyle = rgba("#bff8ff", .6*s.z);
+      ctx.lineWidth = s.z*1.4;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + (x-cx)*k, y + (y-cy)*k); ctx.stroke();
+    } else {
+      ctx.fillStyle = rgba("#dfe9ff", a);
+      ctx.fillRect(x, y, s.z*1.6, s.z*1.6);
+    }
+  }
+  if(warping){ ctx.fillStyle = rgba("#5ef2ff", .18*Math.sin(wp*Math.PI)); ctx.fillRect(0,0,W,HH); }
+}
+function drawNebula(p, t){
+  const c = SYS.crypto.color;
+  for(let k=0;k<4;k++){
+    const ox = Math.cos(t*.15 + k*1.7)*p.r*.45, oy = Math.sin(t*.12 + k*2.1)*p.r*.25;
+    const g = ctx.createRadialGradient(p.x+ox, p.y+oy, 0, p.x+ox, p.y+oy, p.r*(0.9+0.2*k/3));
+    g.addColorStop(0, rgba(k%2 ? "#7a5cff" : c, .10)); g.addColorStop(1, rgba(c, 0));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x+ox, p.y+oy, p.r*1.2, 0, 6.283); ctx.fill();
+  }
+  ctx.setLineDash([3,5]); ctx.strokeStyle = rgba(c,.35); ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r*1.25, p.r*.62, 0, 0, 6.283); ctx.stroke(); ctx.setLineDash([]);
+}
+function drawPlanet(p, t){
+  const c = p.sys.color;
+  ctx.save();
+  ctx.shadowColor = c; ctx.shadowBlur = 22;
+  const g = ctx.createRadialGradient(p.x-p.r*.4, p.y-p.r*.45, p.r*.05, p.x, p.y, p.r);
+  g.addColorStop(0, rgba("#ffffff", .85)); g.addColorStop(.28, c); g.addColorStop(1, "#060c18");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+  ctx.restore();
+  // bande industriali + luci delle città sul lato in ombra
+  ctx.save(); ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.clip();
+  ctx.strokeStyle = rgba("#000000", .22); ctx.lineWidth = Math.max(1, p.r*.06);
+  for(let k=-2;k<=2;k++){ ctx.beginPath(); ctx.ellipse(p.x, p.y + k*p.r*.32, p.r*1.1, p.r*.12, -0.25, 0, 6.283); ctx.stroke(); }
+  for(const L of p.lights){
+    const x = p.x + Math.cos(L.a)*L.d*p.r, y = p.y + Math.sin(L.a)*L.d*p.r;
+    ctx.fillStyle = rgba("#ffe7a3", .35 + .35*Math.sin(t*2 + L.ph));
+    ctx.fillRect(x, y, 1.4, 1.4);
+  }
+  ctx.restore();
+}
+function drawStation(p, t){
+  const c = p.sys.color;
+  ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(REDUCED ? 0 : t*.25);
+  ctx.shadowColor = c; ctx.shadowBlur = 16;
+  ctx.strokeStyle = c; ctx.lineWidth = 1.6; ctx.fillStyle = rgba(c,.18);
+  ctx.beginPath(); for(let k=0;k<6;k++){ const a=k*Math.PI/3; ctx.lineTo(Math.cos(a)*p.r, Math.sin(a)*p.r); } ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); for(let k=0;k<3;k++){ const a=k*Math.PI/3; ctx.moveTo(Math.cos(a)*p.r*1.6, Math.sin(a)*p.r*1.6); ctx.lineTo(-Math.cos(a)*p.r*1.6, -Math.sin(a)*p.r*1.6); } ctx.stroke();
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0,0,p.r*.35,0,6.283); ctx.fill();
+  ctx.restore();
+}
+function label(x, y, text, sub, color, align="center"){
+  ctx.textAlign = align; ctx.textBaseline = "top";
+  ctx.font = `600 11px Oxanium, ui-sans-serif, sans-serif`;
+  const w = ctx.measureText(text).width;
+  const lx = clamp(x, w/2 + 6, W - w/2 - 6);
+  ctx.fillStyle = color; ctx.fillText(text, lx, y);
+  if(sub){ ctx.font = `400 10px "IBM Plex Mono", monospace`; ctx.fillStyle = rgba("#9fb3d9", .85); ctx.fillText(sub, lx, y+13); }
+}
+function reticle(x, y, r, color, t){
+  const R = r + 7 + (REDUCED ? 0 : Math.sin(t*4)*1.5), L = Math.max(5, R*.35);
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  for(const [sx,sy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
+    ctx.beginPath(); ctx.moveTo(x+sx*R, y+sy*(R-L)); ctx.lineTo(x+sx*R, y+sy*R); ctx.lineTo(x+sx*(R-L), y+sy*R); ctx.stroke();
+  }
+}
+function satPos(s, t){
+  const a = s.phase + (REDUCED ? 0 : t*s.speed);
+  return [s.planet.x + Math.cos(a)*s.orbit, s.planet.y + Math.sin(a)*s.orbit*0.92];
+}
+function drawSat(s, t){
+  const [x,y] = satPos(s,t); s.x=x; s.y=y;
+  const e = eff(s.h), c = s.planet.sys.color, good = e.pnl >= 0;
+  // flusso di estrazione verso il pianeta (solo in utile, velocità ∝ rendimento)
+  if(good && !REDUCED){
+    const rate = 0.25 + 1.2*clamp(e.pct,0,1);
+    for(let k=0;k<2;k++){
+      const f = (t*rate + s.flow + k*.5) % 1;
+      const fx = x + (s.planet.x - x)*f, fy = y + (s.planet.y - y)*f;
+      ctx.fillStyle = rgba("#3dffb0", .75*(1-f)); ctx.fillRect(fx-1, fy-1, 2, 2);
+    }
+  }
+  ctx.save();
+  ctx.shadowColor = good ? "#3dffb0" : "#ff4d6d"; ctx.shadowBlur = good ? 10 : 14;
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, s.r, 0, 6.283); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = good ? rgba("#3dffb0", .9) : rgba("#ff4d6d", .95);
+  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(x, y, s.r + 2.5, 0, 6.283); ctx.stroke();
+  if(!good){ // scintille
+    for(let k=0;k<3;k++){
+      if(Math.random() < .5) continue;
+      const a = rand(0,6.283), d = s.r + rand(2,6);
+      ctx.strokeStyle = rgba(Math.random()<.5 ? "#ffd37a" : "#ff4d6d", .9);
+      ctx.beginPath(); ctx.moveTo(x+Math.cos(a)*d, y+Math.sin(a)*d); ctx.lineTo(x+Math.cos(a)*(d+3), y+Math.sin(a)*(d+3)); ctx.stroke();
+    }
+  }
+}
+function drawMeteor(m, t, dt){
+  if(m.dead) return;
+  const s = m.sat;
+  if(!REDUCED){
+    m.dist -= m.speed*dt; m.ang += 0.35*dt; m.rot += m.spin*dt;
+    if(m.dist < s.r + 3){ burst(s.x, s.y, "#ffb547", 6); m.dist = rand(s.r+50, s.r+90); m.ang = rand(0,6.283); }
+  }
+  const x = s.x + Math.cos(m.ang)*m.dist, y = s.y + Math.sin(m.ang)*m.dist;
+  m.x = x; m.y = y;
+  const tx = Math.cos(m.ang), ty = Math.sin(m.ang);
+  const g = ctx.createLinearGradient(x, y, x+tx*16, y+ty*16);
+  g.addColorStop(0, rgba("#ff7a45",.8)); g.addColorStop(1, rgba("#ff4d6d",0));
+  ctx.strokeStyle = g; ctx.lineWidth = m.size*1.1; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+tx*16, y+ty*16); ctx.stroke();
+  ctx.save(); ctx.translate(x,y); ctx.rotate(m.rot);
+  ctx.fillStyle = "#5b4a43"; ctx.strokeStyle = "#ff9b6b"; ctx.lineWidth = 1;
+  ctx.beginPath(); m.verts.forEach((v,k)=>{ const a=k/m.verts.length*6.283; ctx.lineTo(Math.cos(a)*m.size*v, Math.sin(a)*m.size*v); }); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawPlan(t){
+  if(!plan) return;
+  const a = plan.phase + (REDUCED ? 0 : t*plan.speed);
+  plan.x = plan.planet.x + Math.cos(a)*plan.orbit; plan.y = plan.planet.y + Math.sin(a)*plan.orbit*0.92;
+  ctx.setLineDash([2,3]); ctx.strokeStyle = rgba("#5ef2ff", .8); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(plan.x, plan.y, plan.r, 0, 6.283); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(plan.x-plan.r-3, plan.y); ctx.lineTo(plan.x+plan.r+3, plan.y); ctx.moveTo(plan.x, plan.y-plan.r-3); ctx.lineTo(plan.x, plan.y+plan.r+3); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+let last = performance.now()/1000;
+function frame(now){
+  const t = now/1000, dt = Math.min(.05, t - last); last = t;
+  ctx.clearRect(0,0,W,HH);
+  drawStars(t, dt);
+  // orbite
+  Object.values(planets).forEach(p => {
+    if(p.sys.kind === "nebula") return;
+    const rings = new Set(sats.filter(s=>s.planet===p).map(s=>s.orbit));
+    rings.forEach(o => { ctx.strokeStyle = rgba(p.sys.color,.14); ctx.setLineDash([2,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(p.x,p.y,o,o*.92,0,0,6.283); ctx.stroke(); });
+    ctx.setLineDash([]);
+  });
+  if(plan){ ctx.strokeStyle = rgba("#5ef2ff",.08); ctx.setLineDash([1,6]); ctx.beginPath(); ctx.ellipse(plan.planet.x,plan.planet.y,plan.orbit,plan.orbit*.92,0,0,6.283); ctx.stroke(); ctx.setLineDash([]); }
+  // corpi
+  Object.values(planets).forEach(p => {
+    if(p.sys.kind === "nebula") drawNebula(p,t);
+    else if(p.sys.kind === "station") drawStation(p,t);
+    else drawPlanet(p,t);
+  });
+  sats.forEach(s => drawSat(s,t));
+  drawPlan(t);
+  const active = syncMeteors(t);
+  meteors.forEach(m => drawMeteor(m,t,dt));
+  // particelle
+  for(let k=parts.length-1;k>=0;k--){
+    const p = parts[k]; p.life -= dt; if(p.life<=0){ parts.splice(k,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vx*=.96; p.vy*=.96;
+    ctx.fillStyle = rgba(p.color, clamp(p.life/p.max,0,1)); ctx.fillRect(p.x-1,p.y-1,2.4,2.4);
+  }
+  for(let k=floats.length-1;k>=0;k--){
+    const f = floats[k]; f.life -= dt; if(f.life<=0){ floats.splice(k,1); continue; }
+    f.y -= 18*dt;
+    ctx.font = `600 11px "IBM Plex Mono", monospace`; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle = rgba(f.color, clamp(f.life,0,1)); ctx.fillText(f.text, clamp(f.x, 60, W-60), f.y);
+  }
+  // etichette
+  Object.values(planets).forEach(p => {
+    const s = p.sys;
+    const below = s.kind === "nebula" ? p.y + p.r*.7 : p.y + p.r + (sats.filter(q=>q.planet===p).reduce((m,q)=>Math.max(m,q.orbit+q.r),0) || p.r) - p.r + 8;
+    const ly = Math.min(below, HH - 28);
+    const sub = s.kind === "nebula" ? "0 € · settore inesplorato" : `${pctU(s.w,1)} · ${eur0.format(s.value)}`;
+    label(p.x, ly, s.label.toUpperCase(), sub, s.color);
+  });
+  sats.forEach(s => {
+    if(s.h.w >= 0.025 || state.selected === s.h.id || state.hover === s.h.id){
+      ctx.font = `500 10px "IBM Plex Mono", monospace`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillStyle = rgba("#e8f0ff", .9);
+      const tw = ctx.measureText(s.h.sign).width;
+      if(s.x + s.r + 6 + tw > W - 4){ ctx.textAlign = "right"; ctx.fillText(s.h.sign, s.x - s.r - 6, s.y); }
+      else ctx.fillText(s.h.sign, s.x + s.r + 6, s.y);
+    }
+  });
+  // reticolo selezione / hover
+  const sel = state.selected, hv = state.hover || state.rosterHover;
+  const target = id => {
+    if(!id) return null;
+    if(id.startsWith("sys:")){ const p = planets[id.slice(4)]; return p && {x:p.x,y:p.y,r:p.r}; }
+    if(id === "plan") return plan && {x:plan.x,y:plan.y,r:plan.r};
+    const s = sats.find(q=>q.h.id===id); return s && {x:s.x,y:s.y,r:s.r};
+  };
+  const ts = target(sel); if(ts) reticle(ts.x, ts.y, ts.r, "#5ef2ff", t);
+  const th = target(hv); if(th && hv !== sel) reticle(th.x, th.y, th.r, rgba("#5ef2ff",.5), t);
+  $("threats").textContent = active;
+  requestAnimationFrame(frame);
+}
+
+/* ---- interazione ---- */
+function pick(x, y){
+  for(const m of meteors){ if(!m.dead && m.x!==undefined && Math.hypot(m.x-x, m.y-y) < 14) return {type:"meteor", m}; }
+  for(let k=sats.length-1;k>=0;k--){ const s=sats[k]; if(Math.hypot(s.x-x, s.y-y) < Math.max(s.r+4, 11)) return {type:"sat", id:s.h.id, s}; }
+  if(plan && Math.hypot(plan.x-x, plan.y-y) < 13) return {type:"plan", id:"plan"};
+  for(const p of Object.values(planets)){
+    const rr = p.sys.kind === "nebula" ? p.r*1.2 : p.r + 4;
+    if(Math.hypot(p.x-x, p.y-y) < rr) return {type:"sys", id:"sys:"+p.sys.key, p};
+  }
+  return null;
+}
+function showTip(hit, x, y){
+  const tip = $("tip");
+  if(!hit || hit.type === "meteor"){
+    if(hit){ tip.innerHTML = `<div class="t" style="color:var(--loss)">METEORITE</div><div class="r">bersaglio <b>${esc(hit.m.sat.h.sign)}</b></div><div class="r">clic</div><b>per abbatterlo</b>`; }
+    else { tip.hidden = true; return; }
+  } else if(hit.type === "sat"){
+    const h = hit.s.h, e = eff(h);
+    tip.innerHTML = `<div class="t">${esc(h.sign)}</div>
+      <div class="r">controvalore <b class="num">${eur.format(e.value)}</b></div>
+      <div class="r">peso <b class="num">${pctU(h.w,2)}</b></div>
+      <div class="r">PnL <b class="num ${cls(e.pnl)}">${sEur(e.pnl)} · ${pct(e.pct)}</b></div>`;
+  } else if(hit.type === "plan"){
+    tip.innerHTML = `<div class="t" style="color:var(--scan)">NAVE IN COSTRUZIONE</div><div class="r">PAC <b>${eur0.format(SNAP.plan.amount)}/mese</b></div><div class="r">quote <b>0</b></div>`;
+  } else {
+    const s = hit.p.sys;
+    tip.innerHTML = `<div class="t" style="color:${s.color}">${esc(s.label.toUpperCase())}</div>
+      <div class="r">controvalore <b class="num">${eur.format(s.value)}</b></div>
+      <div class="r">peso <b class="num">${pctU(s.w,1)}</b></div>
+      <div class="r">posizioni <b class="num">${s.items.length}</b></div>`;
+  }
+  tip.hidden = false;
+  const bw = wrap.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = clamp(x + 14, 4, bw - tw - 4) + "px";
+  tip.style.top = clamp(y + 14, 4, wrap.clientHeight - th - 4) + "px";
+}
+function local(ev){ const r = cv.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+cv.addEventListener("pointermove", ev => {
+  if(ev.pointerType === "touch") return;
+  const [x,y] = local(ev); const hit = pick(x,y);
+  state.hover = hit && hit.id || null;
+  cv.style.cursor = hit ? "pointer" : "crosshair";
+  showTip(hit, x, y);
+});
+cv.addEventListener("pointerleave", () => { state.hover = null; $("tip").hidden = true; });
+cv.addEventListener("click", ev => {
+  const [x,y] = local(ev); const hit = pick(x,y);
+  if(!hit) return;
+  if(hit.type === "meteor"){
+    const m = hit.m, h = m.sat.h, e = eff(h);
+    m.dead = true; m.respawn = performance.now()/1000 + rand(3,6);
+    burst(m.x, m.y, "#ffb547", 18); burst(m.x, m.y, "#ff4d6d", 8);
+    floats.push({x:m.x, y:m.y-8, text:`${h.sign} ${sEur(e.pnl)}`, color:"#ff8aa0", life:1.6});
+    state.score++; $("score").textContent = state.score;
+    return;
+  }
+  select(hit.id);
+});
+addEventListener("keydown", ev => { if(ev.key === "Escape"){ select("sys:core"); } });
+
+$("drill").addEventListener("click", () => {
+  state.drill = !state.drill;
+  $("drill").setAttribute("aria-pressed", state.drill);
+  $("drill").textContent = state.drill ? "Fine esercitazione" : "Esercitazione Red Alert −30%";
+  renderHUD(); renderRoster(); select(state.selected); renderIntel();
+});
+
+/* ======================= HYPERDRIVE ======================= */
+const SCEN = [{k:"Prudente", r:.03, c:"#8195bb"}, {k:"Base", r:.06, c:"#5ef2ff"}, {k:"Ottimista", r:.08, c:"#3dffb0"}];
+function project(v0, pmt, years, r){
+  const rm = Math.pow(1+r, 1/12) - 1, pts=[v0];
+  let v = v0;
+  for(let m=1;m<=years*12;m++){ v = (v + pmt)*(1+rm); if(m%12===0) pts.push(v); }
+  return pts;
+}
+function renderHyper(){
+  const years = +$("hd-years").value, pmt = Math.max(0, +$("hd-monthly").value || 0);
+  $("hd-years-v").textContent = years;
+  const v0 = TOTAL;
+  const series = SCEN.map(s => ({...s, pts:project(v0, pmt, years, s.r)}));
+  const paid = Array.from({length:years+1}, (_,y)=> v0 + pmt*12*y);
+  $("hd-scen").innerHTML = series.map(s => {
+    const end = s.pts[s.pts.length-1], c = classFor(end);
+    return `<div><div class="lab">${s.k} · ${pctU(s.r,0)}/anno</div><div class="val num" style="color:${s.c}">${eur0.format(end)}</div><div class="cls">Classe ${c.cur.name}</div></div>`;
+  }).join("");
+  // grafico
+  const Wc=560, Hc=170, L=58, R=12, T=12, B=26;
+  const maxV = Math.max(...series[2].pts) * 1.04;
+  const X = y => L + (Wc-L-R) * (y/years), Y = v => T + (Hc-T-B) * (1 - v/maxV);
+  let g = "";
+  [0, .25, .5, .75, 1].forEach(f => {
+    const v = maxV*f, y = Y(v);
+    g += `<line x1="${L}" x2="${Wc-R}" y1="${y}" y2="${y}" stroke="#1c2b47" stroke-width="1"/>`;
+    g += `<text x="${L-6}" y="${y+3}" text-anchor="end" fill="#8195bb" font-size="10" font-family="IBM Plex Mono, monospace">${Math.round(v/1000)}k</text>`;
+  });
+  g += `<text x="${L}" y="${Hc-8}" fill="#8195bb" font-size="10" font-family="IBM Plex Mono, monospace">oggi</text>`;
+  g += `<text x="${Wc-R}" y="${Hc-8}" text-anchor="end" fill="#8195bb" font-size="10" font-family="IBM Plex Mono, monospace">+${years} anni</text>`;
+  g += `<polyline fill="none" stroke="#56698e" stroke-dasharray="4 4" stroke-width="1.2" points="${paid.map((v,y)=>`${X(y)},${Y(v)}`).join(" ")}"/>`;
+  const base = series[1].pts;
+  g += `<polygon fill="${rgba("#5ef2ff",.08)}" points="${X(0)},${Y(0)} ${base.map((v,y)=>`${X(y)},${Y(v)}`).join(" ")} ${X(years)},${Y(0)}"/>`;
+  series.forEach(s => {
+    g += `<polyline fill="none" stroke="${s.c}" stroke-width="${s.k==="Base"?2.2:1.4}" points="${s.pts.map((v,y)=>`${X(y)},${Y(v)}`).join(" ")}"/>`;
+    const ev = s.pts[s.pts.length-1];
+    g += `<circle cx="${X(years)}" cy="${Y(ev)}" r="3" fill="${s.c}"/>`;
+  });
+  g += `<text x="${L+6}" y="${Y(paid[paid.length-1]) - 6}" fill="#56698e" font-size="10" font-family="IBM Plex Mono, monospace">versato: ${eur0.format(paid[paid.length-1])}</text>`;
+  $("hd-chart").innerHTML = g;
+}
+$("hd-years").addEventListener("input", renderHyper);
+$("hd-monthly").addEventListener("input", renderHyper);
+$("hd-go").addEventListener("click", () => {
+  renderHyper();
+  if(!REDUCED) state.warpUntil = performance.now()/1000 + 1.4;
+});
+
+/* ======================= INTELLIGENCE ======================= */
+function renderIntel(){
+  const acwi = H.find(h=>h.sign==="ACWI");
+  const usa = SYS.usa, emBroad = H.filter(h=>["EM XTRACKERS","EM AMUNDI","EM IMI"].includes(h.sign));
+  const emBroadV = emBroad.reduce((s,h)=>s+h.value,0);
+  const dust = H.filter(h=>h.w < 0.01), dustV = dust.reduce((s,h)=>s+h.value,0);
+  const losers = H.filter(h=>h.pnl<0);
+  const lossTot = losers.reduce((s,h)=>s+h.pnl,0);
+  const crash = H.reduce((s,h)=>s + h.value*(h.sys==="gold"?0:SHOCK), 0);
+  const items = [
+    {ic:"01", c:"var(--scan)", h:"Un pianeta, un motore", p:`Il Nucleo Globale pesa <b>${pctU(SYS.core.w,1)}</b> e quasi tutto è un solo ETF: <b>ACWI al ${pctU(acwi.w,1)}</b>. È lui a fare il ${pctU(acwi.pnl/H.reduce((s,h)=>s+h.pnl,0),0)} del guadagno totale. Il resto della mappa, per quanto colorato, sposta poco.`},
+    {ic:"02", c:"var(--warn)", h:"Rotte sovrapposte", p:`<b>${usa.items.length} ETF S&amp;P 500</b> (${eur0.format(usa.value)}) e <b>${emBroad.length} ETF emergenti generalisti</b> (${eur0.format(emBroadV)}) replicano mercati che l'ACWI contiene già. Il PAC attivo va su un secondo ETF mondo (Amundi Core MSCI World), quasi sovrapposto all'ACWI.`},
+    {ic:"03", c:"var(--muted)", h:"Detriti orbitali", p:`<b>${dust.length} posizioni su ${H.length}</b> pesano meno dell'1%: insieme fanno ${eur0.format(dustV)} (${pctU(dustV/TOTAL,1)}). Molte arrivano dal trasferimento da Baader di dicembre 2025. Complicano la lettura più di quanto cambino il risultato.`},
+    {ic:"04", c:"var(--loss)", h:"Zone di combattimento", p:`${losers.length} posizioni in perdita: ${losers.map(h=>`<b>${esc(h.sign)}</b> ${pct(h.pnlPct)}`).join(", ")}, per ${sEur(lossTot)} in tutto. Micron è il caso tipico: prezzo ${pct(H.find(h=>h.sign==="MU").ytd,0)} da inizio anno, posizione ${pct(H.find(h=>h.sign==="MU").pnlPct)} perché comprata a giugno vicino ai massimi.`},
+    {ic:"05", c:"var(--gold)", h:"Scudi difensivi quasi assenti", p:`Oro ${pctU(SYS.gold.w,1)}, liquidità 0 €, obbligazioni 0, crypto 0. È coerente con un mandato 100% azionario, ma significa che in un calo del 30% la flotta perde circa <b>${eur0.format(Math.abs(crash))}</b> senza nulla che attutisca. Prova l'esercitazione Red Alert per vederlo sulla mappa.`}
+  ];
+  $("intel").innerHTML = items.map(i => `<li><span class="ic" style="color:${i.c}">${i.ic}</span><div><h3>${i.h}</h3><p>${i.p}</p></div></li>`).join("");
+}
+
+/* ======================= BOOT ======================= */
+$("foot").textContent = `Fonte: Scalable Capital (MCP), portafoglio "${SNAP.portfolio}", istantanea del ${SNAP.asOf}. Controvalori = quantità × prezzo mid; PnL dall'acquisto e variazioni di prezzo come riportati da Scalable. La pagina non si aggiorna da sola e non può inviare ordini.`;
+renderHUD(); renderRoster(); select("sys:core"); renderHyper(); renderIntel();
+requestAnimationFrame(t => { last = t/1000; frame(t); });
+</script>
