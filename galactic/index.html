@@ -82,6 +82,15 @@ button{font:inherit;color:inherit}
 .btn.alert[aria-pressed="true"]{background:var(--loss);color:#1a0207;border-color:var(--loss)}
 .btn.primary{background:var(--scan);color:#021216;border-color:var(--scan)}
 .btn.primary:hover{box-shadow:0 0 22px -2px var(--scan)}
+.crumbs{position:absolute;top:10px;left:12px;right:12px;z-index:2;display:flex;gap:10px;align-items:center;flex-wrap:wrap;pointer-events:none}
+.crumbs > *{pointer-events:auto}
+.crumbs nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;background:rgba(4,6,12,.6);padding:4px 8px;border-radius:3px}
+.crumb{background:none;border:0;padding:0;cursor:pointer;color:var(--muted);font:inherit;letter-spacing:inherit;text-transform:inherit}
+.crumb:hover{color:var(--scan)}
+.crumb.on{color:var(--text);cursor:default}
+.btn.back{padding:5px 10px;font-size:11px;background:rgba(4,6,12,.75)}
+.map-hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:1;font-size:11px;color:var(--muted);pointer-events:none;white-space:nowrap;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;background:rgba(4,6,12,.65);padding:3px 8px;border-radius:3px}
+.nav-btn{align-self:flex-start}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .lg{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
@@ -96,7 +105,7 @@ button{font:inherit;color:inherit}
 .alarm{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 20px rgba(255,30,60,.45);animation:alarm 1.2s ease-in-out infinite}
 @keyframes alarm{50%{box-shadow:inset 0 0 60px 6px rgba(255,30,60,.18)}}
 .warn-banner{
-  position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:2;pointer-events:none;
+  position:absolute;left:50%;top:48px;transform:translateX(-50%);z-index:2;pointer-events:none;
   font-family:var(--f-display);font-weight:700;letter-spacing:.2em;color:var(--loss);font-size:13px;
   border:1px solid var(--loss);padding:5px 12px;background:rgba(30,2,8,.75);white-space:nowrap
 }
@@ -206,17 +215,20 @@ footer{color:var(--dim);font-size:11px;max-width:100ch}
         <div class="map-tools">
           <span class="chip">Meteoriti abbattuti <b class="num" id="score">0</b></span>
           <span class="chip">Minacce attive <b class="num" id="threats">0</b></span>
+          <button class="btn" id="audio" aria-pressed="false" title="Effetti sonori per tuffi, meteoriti e sonar">Audio off</button>
           <button class="btn alert" id="drill" aria-pressed="false" title="Simula un calo del 30% su tutto l'azionario">Esercitazione Red Alert −30%</button>
         </div>
       </div>
       <div class="map-wrap" id="map-wrap">
         <canvas id="map" role="img" aria-label="Mappa stellare del portafoglio: ogni pianeta è un gruppo di asset, ogni satellite una posizione. L'elenco completo è nel registro della flotta."></canvas>
+        <div class="crumbs" id="crumbs"></div>
+        <div class="map-hint" id="map-hint"></div>
         <div class="tip" id="tip" hidden></div>
         <div class="alarm" id="alarm" hidden></div>
         <div class="warn-banner" id="banner" hidden>RED ALERT · ESERCITAZIONE</div>
       </div>
       <div class="legend">
-        <span><i class="lg" style="background:var(--sys-core)"></i>Pianeta = sistema di asset · area ∝ peso</span>
+        <span><i class="lg" style="background:var(--sys-core)"></i>Pianeta = sistema di asset · area ∝ peso · clic per entrare in orbita</span>
         <span><i class="lg" style="background:#cfe;width:6px;height:6px"></i>Satellite = posizione · area ∝ peso</span>
         <span><i class="lg" style="background:var(--profit);box-shadow:0 0 6px var(--profit)"></i>In utile: scudo verde, flusso di estrazione</span>
         <span><i class="lg" style="background:var(--loss);box-shadow:0 0 6px var(--loss)"></i>In perdita: meteoriti in arrivo, clicca per abbatterli</span>
@@ -302,6 +314,32 @@ const RAW = [
   ["IT0004764699","Brunello Cucinelli","BC","stock",1.009313,85.51,3.0163,0.0362,-0.1318,0.0104,"Azione"],
   ["IE00B4ND3602","iShares Physical Gold ETC","GOLD","gold",4,70.1625,5.16,0.0187,-0.0349,-0.0087,"ETC"]
 ];
+const CHART_DATES = ['30 ott','7 nov','17 nov','25 nov','3 dic','11 dic','19 dic','5 gen','13 gen','21 gen','29 gen','6 feb','16 feb','24 feb','4 mar','12 mar','20 mar','30 mar','9 apr','17 apr','27 apr','6 mag','14 mag','22 mag','1 giu','9 giu','17 giu','25 giu','3 lug','13 lug','21 lug','29 lug','6 ago','14 ago','24 ago','1 set','9 set','17 set','25 set','5 ott','13 ott','21 ott','29 ott'];
+// prezzi mid EUR, un punto ogni ~3 sedute, 30 ott 2025 → 29 ott 2026 (SpaceX quotata da giugno 2026)
+const CHARTS = {
+  "US5951121038":[196,206.7,208.575,192.52,200.35,222.3,228.175,266.925,291.025,335.325,372.75,334.1,342.65,354.375,345.125,351.7,369.125,280.3,359.8,386.65,445.9,562.6,670,646.15,893.1,812,921.15,1060.6,911,816.85,858.75,624.8,768.55,839,780.05,804.25,883,854.3,950.6,947.85,850.85,814.6,853.4],
+  "LU2903252349":[10.378,10.253,10.159,10.251,10.322,10.382,10.324,10.522,10.675,10.576,10.525,10.599,10.557,10.708,10.641,10.468,10.162,10.063,10.63,11.011,11.02,11.384,11.527,11.547,11.753,11.512,11.75,11.723,11.887,11.849,11.885,11.496,12.015,12.121,11.883,11.909,11.915,12.009,12.213,12.424,12.408,12.281,12.336],
+  "IE00BP3QZ825":[83.135,82.195,81.045,80.885,82.05,84.21,83.03,84.855,86.6,85.635,85.255,84.23,84.18,85.63,84.54,82.82,80.285,78.425,87.405,90.59,91.39,96.235,99.005,98.525,100.205,99.34,105.6,108.16,104.54,101.82,102.37,93.565,100.1,102.52,98.585,97.86,100.84,100.83,104.82,107.36,104.18,100.54,101.41],
+  "IE00B4L5Y983":[111.795,110.185,109.0775,110.3375,111.0975,111.755,110.955,112.61,114.2675,112.9675,112.1975,112.9825,112.1475,113.675,113.9975,111.7925,108.39,107.1175,112.85,116.73,116.875,119.9475,121.9925,122.37,123.775,121.9725,124.02,124.07,125.75,126.06,125.885,122.8875,128.115,129.0175,126.2875,126.205,125.9825,127.4875,129.3925,131.3525,131.9425,131.145,131.8025],
+  "IE00BFMXXD54":[113.7425,111.7925,110.5175,112.23,112.7225,113.195,112.1725,113.125,114.87,113.1475,111.8475,112.69,110.9475,112.5425,113.545,111.7175,108.775,106.525,112.3075,116.7075,117.815,120.7225,123.8975,124.0425,125.965,123.45,124.8825,125.0425,126.67,127.365,127.085,123.0675,129.2325,129.9775,126.905,127.3725,127.06,128.6325,131.4475,134.1125,134.9025,133.6525,134.14],
+  "IE00B5BMR087":[634.52,623.13,616.34,625.94,628.62,631.36,625.54,630.92,640.65,631.07,624.17,628.02,619.27,627.02,632.63,623.12,607,594.37,625.45,650.1,657.4,673.17,690.91,691.8,702.22,688.71,696.97,697.36,706.47,710.34,708.63,686.5,720.63,724.84,707.75,710.1,708.44,717.48,733.19,747.8,752.37,745.39,748.08],
+  "IE00B3ZW0K18":[142.45,139.8675,138.535,140.3775,142.1625,143.385,141.7725,143.01,144.1775,142.4625,144.19,143.155,141.515,142.43,141.8275,138.15,134.8375,130.6375,140.435,146.6375,147.6325,151.405,153.9975,153.62,155.9775,151.3725,152.985,151.0625,154.2925,154.4575,154.2925,150.0475,158.3275,159.725,157.19,156.73,156.8325,156.655,158.89,159.515,160.1375,159.0725,158.3075],
+  "IE00BTJRMP35":[65.526,64.245,63.92,63.399,63.462,63.806,63.638,66.816,68.147,68.853,69.97,70.208,71.417,73.441,70.395,68.469,66.71,65.787,71.605,74.964,75.454,79.635,79.773,78.854,83.269,78.951,83.149,83.337,82.303,79.284,79.715,74.133,78.895,80.184,78.944,80.561,82.132,81.271,83.365,85.467,81.836,78.819,78.419],
+  "LU1681045370":[6.234,6.1141,6.0795,6.0336,6.0355,6.0834,6.0532,6.3863,6.4999,6.5592,6.648,6.6928,6.8029,7.0018,6.6915,6.5219,6.3149,6.2473,6.8059,7.1281,7.1708,7.5975,7.6274,7.4924,7.9702,7.5153,7.9089,7.9173,7.8291,7.5228,7.5954,7.0519,7.4835,7.6254,7.5088,7.6538,7.8208,7.7567,7.9443,8.1371,7.795,7.5179,7.4783],
+  "IE00BKM4GZ66":[38.932,38.239,38.041,37.7535,37.765,37.9995,37.8265,39.7655,40.467,40.8725,41.361,41.6685,42.464,43.6235,41.687,40.47,39.5175,39.383,42.2425,44.329,44.46,46.9195,47.1755,46.4335,49.0955,46.5,48.687,48.7775,48.543,46.4895,46.8375,43.7025,46.3265,47.1935,46.488,47.2725,48.229,47.8245,48.9235,50.123,48.227,46.5385,46.117],
+  "IE00BZCQB185":[8.4835,8.385,8.51,8.4495,8.2805,8.258,8.3735,8.4225,8.244,7.9555,7.837,8.163,8.0875,8.1255,7.7225,7.4775,7.111,6.9655,7.499,7.821,7.494,7.6115,7.356,7.405,7.257,7.2865,7.5985,7.7495,7.7175,7.657,7.682,7.638,7.8105,7.7035,7.565,7.635,7.4685,7.4525,7.475,7.335,7.4945,7.4275,7.484],
+  "LU0328476410":[23.195,22.5775,22.57,22.885,23.5825,23.5475,23.7125,24.8075,24.99,24.425,24.63,23.7525,24.1925,24.205,23.17,22.5425,22,22.485,24.3925,25.5425,25.7275,25.4275,25.2275,25.4075,26.33,25.2075,25.5675,25.5875,26.3625,26.475,26.39,26.2375,26.44,26.0675,26.41,26.695,26.8725,26.635,26.5175,26.3675,26.48,26.3,26.1525],
+  "LU0514694370":[11.241,11.443,11.289,11.529,11.565,11.547,11.883,12.061,12.273,12.315,12.571,12.804,12.694,12.946,12.681,12.606,12.795,12.448,12.48,12.615,12.743,13.218,13.181,12.934,12.451,12.307,12.495,12.214,12.429,12.576,12.762,12.514,12.688,12.598,12.76,12.464,12.599,12.462,12.75,12.598,12.528,12.353,12.489],
+  "IE00BGV5VN51":[161.21,154.96,151.6,151.3,153.43,155.08,153.28,156.39,158.44,155.05,155.8,151.55,149.33,150.68,153.44,151.93,149.82,139.85,153.01,164.88,170.11,184.11,194.62,196.99,220.725,201.05,208.275,211.775,206.375,201.085,200.37,186.77,203.325,209.375,199.61,204,208.125,214.2,220.8,225.65,224.025,215.8,214.925],
+  "IE00BYZK4552":[14.695,14.09,13.58,13.581,14.053,14.225,13.801,14.194,14.648,14.653,14.408,14.157,14.063,14.293,14.185,13.761,13.38,12.72,14.224,15.432,16.214,17.156,17.32,17.6,17.986,17.429,18.253,18.591,18.704,17.925,17.622,16.905,18.491,19.09,18.216,18.105,18.09,18.233,19.369,20.2825,19.805,19.268,19.203],
+  "IE00BYXG2H39":[6.687,6.6555,7.0175,7.2465,7.188,7.1245,7.142,6.9925,7.22,7.3825,7.1855,7.351,7.2555,7.4725,7.4505,7.259,7.058,7.0775,7.3765,7.595,7.302,7.4785,7.473,7.4105,7.3675,7.4205,7.645,8.1225,8.6665,8.378,8.3775,8.2795,8.4265,8.566,9.0615,9.012,8.7935,8.96,9.07,9.1195,8.814,9.2535,9.6],
+  "IE00BYZK4669":[7.8555,7.815,7.8555,8.0895,8.0255,8.1585,8.1935,8.2555,8.3125,8.3145,8.2295,8.3115,8.243,8.2885,8.2895,7.9815,7.802,7.853,8.1785,8.448,8.269,8.429,8.449,8.486,8.3695,8.4895,8.708,8.93,9.2955,9.2595,9.301,9.3045,9.4415,9.5055,9.4505,9.4035,9.2865,9.341,9.19,9.218,9.177,9.3645,9.5345],
+  "NL0011585146":[343.45,357.1,349.75,333,337.45,313.55,323.05,323.65,309.4,292.55,282,282.4,316.05,317.7,313.75,290.3,273.65,285.2,300.75,316.45,296.6,286.1,284.65,300.05,300,309.825,307.925,309.875,333.5,327.525,324.6,336.35,351.825,357.8,363.875,356.125,345.85,360.65,361.475,341.6,349.725,353.675,357.85],
+  "US70450Y1038":[59.335,57.39,53.45,52.935,52.44,52.635,51.08,50.59,48.6225,47.93,44.36,34.1325,34.2775,39.8675,40.2225,38.5375,38.175,38.925,39.2875,43.2175,42.4325,39.4475,38.6,38.1125,38.845,35.875,36.8025,37.3275,39.34,41.7825,49.0325,50.695,51.635,53.28,52.865,45.2075,44.8575,46.11,48.4125,48.4875,50.125,50.885,51.47],
+  "US84615Q1031":[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,168.42,134.02,141.68,121.86,109.16,97.64,99.06,120.94,115.66,122.59,126.33,135.29,130.39,152.51,140.07,141.71,129.21],
+  "IT0004764699":[88.66,87.25,86.92,88.86,93.67,96.16,99.775,95.5,97.08,82.99,79.75,83.09,84.46,87.13,76.55,71.76,71.45,72.85,82.92,87.79,83.57,84.81,82.68,82.02,82.44,87.44,86.12,81.11,82.42,81.62,82.67,83.5,92.61,89.03,89.12,84.59,78.55,78.38,81.34,80.72,81.85,84.93,85.22],
+  "IE00B4ND3602":[67.85,67.2275,67.8,69.405,70.0125,70.7,72.0325,73.7925,76.58,80.25,87.5925,81.3875,81.2925,84.81,85.8625,85.85,75.4975,76.3625,79.0075,79.4625,77.4275,77.4,77.2425,75.435,74.9375,71.49,71.7775,68.6575,70.775,68.1875,69.355,68.945,71.315,73.3,77.3875,72.4625,73.325,73.58,72.9125,71.6275,72.1175,71.5575,70.1275],
+};
 const H = RAW.map(a => {
   const h = {id:a[0], isin:a[0], name:a[1], sign:a[2], sys:a[3], qty:a[4], price:a[5], pnl:a[6], pnlPct:a[7], ytd:a[8], d1:a[9], kind:a[10]};
   h.value = h.qty * h.price; h.cost = h.value - h.pnl; return h;
@@ -446,9 +484,17 @@ function holoAsset(h){
       <dt>Prezzo da inizio anno</dt><dd class="${cls(h.ytd)}">${pct(h.ytd)}</dd>
       <dt>Prezzo oggi</dt><dd class="${cls(h.d1)}">${pct(h.d1,2)}</dd>
     </dl>
+    ${view.level === "approach" && view.id === h.id ? "" : `<button class="btn nav-btn" id="nav-go">Avvicinati ▸</button>`}
     ${decodeLine(h)}
     ${state.drill ? `<div class="foot">Valori simulati con ${pct(h.sys==="gold"?0:SHOCK,0)} sul prezzo. Costo di carico reale.</div>` : ""}`;
+  const nb = $("nav-go"); if(nb) nb.addEventListener("click", () => goTo({level:"approach", sys:h.sys, id:h.id}));
 }
+function sysNavButton(k){
+  if(view.level === "system" && view.sys === k) return "";
+  const txt = view.level === "approach" && view.sys === k ? "Torna in orbita ▴" : k === "crypto" ? "Scansiona il settore ▸" : "Entra in orbita ▸";
+  return `<button class="btn nav-btn" id="nav-go">${txt}</button>`;
+}
+function bindSysNav(k){ const nb = $("nav-go"); if(nb) nb.addEventListener("click", () => goTo({level:"system", sys:k})); }
 function holoSystem(k){
   const s = SYS[k];
   $("holo-tag").textContent = s.kind === "planet" ? "sistema" : s.kind === "station" ? "stazione" : "nebulosa";
@@ -457,7 +503,9 @@ function holoSystem(k){
       <div><div class="eyebrow" style="color:${s.color}">Settore inesplorato</div>
       <div class="holo-title">${s.label}</div><div class="holo-sub">nessuna flotta in questo settore</div></div>
       <dl class="kv num"><dt>Controvalore</dt><dd>0,00 €</dd><dt>Posizioni</dt><dd>0</dd><dt>Peso</dt><dd>0,00%</dd></dl>
+      ${sysNavButton(k)}
       <div class="decode ghost">La nebulosa è disegnata vuota di proposito: nel portafoglio non ci sono crypto. ${esc(SNAP.cryptoGhost)}</div>`;
+    bindSysNav(k);
     return;
   }
   let pnl=0, val=0;
@@ -480,8 +528,10 @@ function holoSystem(k){
       <dt>Peso nel portafoglio</dt><dd>${pctU(s.w,1)}</dd>
       <dt>PnL dall'acquisto</dt><dd class="${cls(pnl)}">${arrow(pnl)} ${sEur(pnl)} · ${pct(pnl/(val-pnl))}</dd>
     </dl>
+    ${sysNavButton(k)}
     <div class="sys-list">${rows}</div>${planNote}`;
-  $("holo").querySelectorAll(".row").forEach(b => b.addEventListener("click", () => select(b.dataset.id)));
+  bindSysNav(k);
+  $("holo").querySelectorAll(".sys-list .row").forEach(b => b.addEventListener("click", () => goTo({level:"approach", sys:k, id:b.dataset.id})));
 }
 function holoPlan(){
   $("holo-tag").textContent = "cantiere";
@@ -520,12 +570,21 @@ function renderRoster(){
 }
 
 /* ======================= MAPPA (Canvas) ======================= */
+// Tre livelli: mappa stellare → sistema (un pianeta e le sue posizioni) → avvicinamento (una posizione e la sua telemetria).
+// Ogni passaggio è uno zoom continuo: la scena esterna si ingrandisce sul bersaglio mentre quella interna emerge alla stessa scala.
 const cv = $("map"), ctx = cv.getContext("2d"), wrap = $("map-wrap");
 let W=0, HH=0, DPR=1, BASE=0;
-const stars = Array.from({length:240}, () => ({x:Math.random(), y:Math.random(), z:rand(.2,1), tw:rand(0,6.28)}));
+const stars = Array.from({length:260}, () => ({x:Math.random(), y:Math.random(), z:rand(.2,1), tw:rand(0,6.28)}));
 const planets = {}, sats = [];
-let plan = null;
-const meteors = [], parts = [], floats = [];
+let plan = null, mapThreats = 0;
+const meteors = [], sysMeteors = [], apMeteors = [], parts = [], floats = [];
+const TILT = 0.42;                       // inclinazione delle orbite nella vista di sistema
+const view = {level:"map", sys:null, id:null};
+const SC = {sys:null, ap:null};
+let trans = null, queue = [], enterT = 0;
+const easeIO = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
+const smooth = (a,b,x) => { const u = clamp((x-a)/(b-a),0,1); return u*u*(3-2*u); };
+const FONT_D = "Oxanium, ui-sans-serif, sans-serif", FONT_M = '"IBM Plex Mono", ui-monospace, monospace';
 
 function layout(){
   BASE = Math.min(W, HH);
@@ -560,16 +619,58 @@ function layout(){
     const ns = sats.find(s => s.h === meteors[k].sat.h);
     if(ns) meteors[k].sat = ns; else meteors.splice(k,1);
   }
+  if(SC.sys) SC.sys = buildSystem(SC.sys.key);
+  if(SC.ap) SC.ap = buildApproach(SC.ap.id);
+  sysMeteors.length = 0; apMeteors.length = 0;
 }
 function resize(){
   const r = cv.getBoundingClientRect();
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = r.width; HH = r.height;
   cv.width = Math.round(W*DPR); cv.height = Math.round(HH*DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
   layout();
 }
 new ResizeObserver(resize).observe(cv);
+
+/* ---- scene interne ---- */
+function buildSystem(k){
+  const s = SYS[k], cx = W/2, cy = HH*0.54;
+  const R = s.kind === "nebula" ? BASE*0.30 : s.kind === "station" ? BASE*0.10 : BASE*0.15;
+  const maxO = Math.max(R + 40, Math.min(W/2 - (W < 560 ? 18 : 60), (HH*0.44)/TILT));
+  // satelliti: area ∝ peso dentro il sistema; il più grande sull'orbita più interna
+  const list = s.items.map((h,i) => ({h, r:Math.max(5, R*0.45*Math.sqrt(h.value/s.value)), phase:(i*2.399 + 0.7) % 6.283}));
+  let o = R + (s.kind === "station" ? R*0.7 : 14);
+  list.forEach((it,i) => { o += (i ? list[i-1].r : 0) + it.r + 14; it.orbit = o; });
+  const lastIt = list[list.length-1];
+  const over = lastIt ? lastIt.orbit + lastIt.r : 0;
+  if(over > maxO){
+    const f = (maxO - R)/(over - R);
+    list.forEach(it => { it.orbit = R + (it.orbit - R)*f; it.r = Math.max(4, it.r*Math.min(1, f*1.15)); });
+  }
+  list.forEach((it,i) => {
+    const e = it.h.pnlPct;
+    it.speed = (e >= 0 ? 0.07 + 0.14*clamp(e,0,1) : 0.03) * (i%2 ? -1 : 1);
+    it.rate = 0.12 + 0.5*clamp(e,0,1);            // ritmo dei cargo ∝ rendimento
+    it.ships = e >= 0 ? [rand(0,1), rand(0,1)] : [];
+    it.prev = it.ships.slice();
+  });
+  const lights = Array.from({length:80}, () => ({a:rand(0,6.283), d:Math.sqrt(Math.random())*.92, ph:rand(0,6.28)}));
+  const planX = k === "core" && lastIt ? {orbit:Math.min(maxO + 10, lastIt.orbit + lastIt.r + 24), phase:2.3, speed:0.025, r:8} : null;
+  return {key:k, s, cx, cy, R, sats:list, lights, plan:planX,
+          ghost: k === "crypto" ? {x:cx + R*0.95, y:cy - R*0.4} : null, pingN:-1};
+}
+function buildApproach(id){
+  const h = H.find(x => x.id === id), narrow = W < 640;
+  const R = narrow ? Math.min(W*0.15, HH*0.12) : Math.min(W*0.12, HH*0.22);
+  const cx = narrow ? W*0.27 : W*0.25, cy = narrow ? HH*0.21 : HH*0.44;
+  const chart = narrow ? {x:12, y:HH*0.42, w:W-24, h:HH*0.5} : {x:W*0.47, y:HH*0.12, w:W*0.53 - 20, h:HH*0.74};
+  const craters = Array.from({length:9}, () => ({u:rand(0,1), v:rand(-.7,.7), r:rand(.06,.16)}));
+  return {id, h, narrow, cx, cy, R, chart, craters, sat:{h, x:cx, y:cy, r:R}, plot:null};
+}
+function sysSatPos(sc, it, t){
+  const a = it.phase + (REDUCED ? 0 : t*it.speed), sn = Math.sin(a);
+  return {x:sc.cx + Math.cos(a)*it.orbit, y:sc.cy + sn*it.orbit*TILT, depth:sn};
+}
 
 /* ---- meteoriti ---- */
 function meteorTarget(h){
@@ -577,41 +678,80 @@ function meteorTarget(h){
   if(e.pnl >= 0) return 0;
   return Math.min(5, 1 + Math.floor(Math.abs(e.pct)*20));
 }
-function newMeteor(sat){
-  return {sat, ang:rand(0,6.283), dist:rand(sat.r+45, sat.r+90), speed:rand(5,11), size:rand(2.4,4.2), rot:rand(0,6), spin:rand(-2,2),
+function newMeteor(sat, k=1){
+  return {sat, k, ang:rand(0,6.283), dist:sat.r + rand(45,90)*k, speed:rand(5,11)*k, size:rand(2.4,4.2)*k, rot:rand(0,6), spin:rand(-2,2),
           verts:Array.from({length:7},()=>rand(.65,1.15)), dead:false, respawn:0};
 }
-function syncMeteors(t){
+function syncMeteors(list, arr, t, k=1){
   let active = 0;
-  sats.forEach(s => {
+  list.forEach(s => {
     const want = meteorTarget(s.h);
-    const mine = meteors.filter(m => m.sat === s);
-    for(let k=mine.length; k<want; k++) meteors.push(newMeteor(s));
-    if(mine.length > want) mine.slice(want).forEach(m => meteors.splice(meteors.indexOf(m),1));
+    const mine = arr.filter(m => m.sat === s);
+    for(let n=mine.length; n<want; n++) arr.push(newMeteor(s,k));
+    if(mine.length > want) mine.slice(want).forEach(m => arr.splice(arr.indexOf(m),1));
   });
-  meteors.forEach(m => { if(m.dead && t > m.respawn){ Object.assign(m, newMeteor(m.sat)); } if(!m.dead) active++; });
+  for(let i=arr.length-1;i>=0;i--) if(!list.includes(arr[i].sat)) arr.splice(i,1);
+  arr.forEach(m => { if(m.dead && t > m.respawn) Object.assign(m, newMeteor(m.sat, k)); if(!m.dead) active++; });
   return active;
 }
-function burst(x,y,color,n){
-  for(let k=0;k<n;k++){ const a=rand(0,6.283), v=rand(20,90); parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(.4,.9),max:.9,color}); }
+function burst(x,y,color,n,spd=1){
+  for(let k=0;k<n;k++){ const a=rand(0,6.283), v=rand(20,90)*spd; parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:rand(.4,.9),max:.9,color}); }
 }
 
-/* ---- disegno ---- */
-function drawStars(t, dt){
-  const cx=W/2, cy=HH/2;
+/* ---- audio (solo dopo un clic su "Audio") ---- */
+const AU = {on:false, ctx:null, noise:null};
+function audioCtx(){
+  if(!AU.on) return null;
+  try{
+    if(!AU.ctx){
+      AU.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const len = Math.floor(AU.ctx.sampleRate*1.2), buf = AU.ctx.createBuffer(1, len, AU.ctx.sampleRate), d = buf.getChannelData(0);
+      for(let i=0;i<len;i++) d[i] = Math.random()*2 - 1;
+      AU.noise = buf;
+    }
+    if(AU.ctx.state === "suspended") AU.ctx.resume();
+    return AU.ctx;
+  }catch(err){ AU.on = false; return null; }
+}
+function sfx(kind){
+  const a = audioCtx(); if(!a) return;
+  const t0 = a.currentTime, out = a.createGain(); out.connect(a.destination);
+  if(kind === "whoosh" || kind === "back"){
+    const src = a.createBufferSource(), bp = a.createBiquadFilter(), up = kind === "whoosh";
+    src.buffer = AU.noise; bp.type = "bandpass"; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(up ? 180 : 2200, t0); bp.frequency.exponentialRampToValueAtTime(up ? 2600 : 160, t0 + 1);
+    out.gain.setValueAtTime(0.0001, t0); out.gain.exponentialRampToValueAtTime(0.22, t0 + .35); out.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.1);
+    src.connect(bp); bp.connect(out); src.start(t0); src.stop(t0 + 1.15);
+  } else if(kind === "boom"){
+    const src = a.createBufferSource(), lp = a.createBiquadFilter();
+    src.buffer = AU.noise; lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1400, t0); lp.frequency.exponentialRampToValueAtTime(90, t0 + .45);
+    out.gain.setValueAtTime(0.35, t0); out.gain.exponentialRampToValueAtTime(0.0001, t0 + .5);
+    src.connect(lp); lp.connect(out); src.start(t0); src.stop(t0 + .55);
+  } else {
+    const o = a.createOscillator(), ping = kind === "ping";
+    o.type = "sine";
+    o.frequency.setValueAtTime(ping ? 1250 : 620, t0); if(!ping) o.frequency.exponentialRampToValueAtTime(980, t0 + .08);
+    out.gain.setValueAtTime(ping ? 0.08 : 0.06, t0); out.gain.exponentialRampToValueAtTime(0.0001, t0 + (ping ? 1.1 : .12));
+    o.connect(out); o.start(t0); o.stop(t0 + (ping ? 1.15 : .14));
+  }
+}
+
+/* ---- disegno: elementi comuni ---- */
+function drawStars(t, streak, fx, fy){
   const warping = state.warpUntil > t;
   const wp = warping ? 1 - (state.warpUntil - t)/1.4 : 0;
+  const cx = warping ? W/2 : fx, cy = warping ? HH/2 : fy;
+  const k0 = warping ? Math.sin(wp*Math.PI)*1.6 : streak*0.45;
   for(const s of stars){
     let x = s.x*W, y = s.y*HH;
-    if(!REDUCED && !warping){ x = (x + t*4*s.z) % W; }
-    const a = 0.35 + 0.45*s.z*(0.6+0.4*Math.sin(t*1.7+s.tw));
-    if(warping){
-      const k = Math.sin(wp*Math.PI) * 1.6 * s.z;
-      ctx.strokeStyle = rgba("#bff8ff", .6*s.z);
-      ctx.lineWidth = s.z*1.4;
+    if(!REDUCED) x = (x + t*4*s.z) % W;
+    if(k0 >= 0.02){
+      const k = k0*s.z;
+      ctx.strokeStyle = rgba("#bff8ff", .6*s.z); ctx.lineWidth = s.z*1.4;
       ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x + (x-cx)*k, y + (y-cy)*k); ctx.stroke();
     } else {
-      ctx.fillStyle = rgba("#dfe9ff", a);
+      ctx.fillStyle = rgba("#dfe9ff", 0.35 + 0.45*s.z*(0.6+0.4*Math.sin(t*1.7+s.tw)));
       ctx.fillRect(x, y, s.z*1.6, s.z*1.6);
     }
   }
@@ -651,19 +791,19 @@ function drawStation(p, t){
   const c = p.sys.color;
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(REDUCED ? 0 : t*.25);
   ctx.shadowColor = c; ctx.shadowBlur = 16;
-  ctx.strokeStyle = c; ctx.lineWidth = 1.6; ctx.fillStyle = rgba(c,.18);
+  ctx.strokeStyle = c; ctx.lineWidth = Math.max(1.6, p.r*0.04); ctx.fillStyle = rgba(c,.18);
   ctx.beginPath(); for(let k=0;k<6;k++){ const a=k*Math.PI/3; ctx.lineTo(Math.cos(a)*p.r, Math.sin(a)*p.r); } ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.beginPath(); for(let k=0;k<3;k++){ const a=k*Math.PI/3; ctx.moveTo(Math.cos(a)*p.r*1.6, Math.sin(a)*p.r*1.6); ctx.lineTo(-Math.cos(a)*p.r*1.6, -Math.sin(a)*p.r*1.6); } ctx.stroke();
   ctx.fillStyle = c; ctx.beginPath(); ctx.arc(0,0,p.r*.35,0,6.283); ctx.fill();
   ctx.restore();
 }
-function label(x, y, text, sub, color, align="center"){
-  ctx.textAlign = align; ctx.textBaseline = "top";
-  ctx.font = `600 11px Oxanium, ui-sans-serif, sans-serif`;
+function label(x, y, text, sub, color){
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.font = `600 11px ${FONT_D}`;
   const w = ctx.measureText(text).width;
   const lx = clamp(x, w/2 + 6, W - w/2 - 6);
   ctx.fillStyle = color; ctx.fillText(text, lx, y);
-  if(sub){ ctx.font = `400 10px "IBM Plex Mono", monospace`; ctx.fillStyle = rgba("#9fb3d9", .85); ctx.fillText(sub, lx, y+13); }
+  if(sub){ ctx.font = `400 10px ${FONT_M}`; ctx.fillStyle = rgba("#9fb3d9", .85); ctx.fillText(sub, lx, y+13); }
 }
 function reticle(x, y, r, color, t){
   const R = r + 7 + (REDUCED ? 0 : Math.sin(t*4)*1.5), L = Math.max(5, R*.35);
@@ -672,6 +812,33 @@ function reticle(x, y, r, color, t){
     ctx.beginPath(); ctx.moveTo(x+sx*R, y+sy*(R-L)); ctx.lineTo(x+sx*R, y+sy*R); ctx.lineTo(x+sx*(R-L), y+sy*R); ctx.stroke();
   }
 }
+function drawMeteor(m, t, dt){
+  if(m.dead) return;
+  const s = m.sat, k = m.k || 1;
+  if(!REDUCED){
+    m.dist -= m.speed*dt; m.ang += 0.35*dt; m.rot += m.spin*dt;
+    if(m.dist < s.r + 3){ if(!trans) burst(s.x, s.y, "#ffb547", 6, k); m.dist = s.r + rand(50,90)*k; m.ang = rand(0,6.283); }
+  }
+  const x = s.x + Math.cos(m.ang)*m.dist, y = s.y + Math.sin(m.ang)*m.dist;
+  m.x = x; m.y = y;
+  const tx = Math.cos(m.ang), ty = Math.sin(m.ang), tl = 16*k;
+  const g = ctx.createLinearGradient(x, y, x+tx*tl, y+ty*tl);
+  g.addColorStop(0, rgba("#ff7a45",.8)); g.addColorStop(1, rgba("#ff4d6d",0));
+  ctx.strokeStyle = g; ctx.lineWidth = m.size*1.1; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+tx*tl, y+ty*tl); ctx.stroke();
+  ctx.save(); ctx.translate(x,y); ctx.rotate(m.rot);
+  ctx.fillStyle = "#5b4a43"; ctx.strokeStyle = "#ff9b6b"; ctx.lineWidth = 1;
+  ctx.beginPath(); m.verts.forEach((v,i)=>{ const a=i/m.verts.length*6.283; ctx.lineTo(Math.cos(a)*m.size*v, Math.sin(a)*m.size*v); }); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function ghostShip(x, y, r){
+  ctx.setLineDash([2,3]); ctx.strokeStyle = rgba("#5ef2ff", .8); ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-r-3, y); ctx.lineTo(x+r+3, y); ctx.moveTo(x, y-r-3); ctx.lineTo(x, y+r+3); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ---- livello 0: mappa stellare ---- */
 function satPos(s, t){
   const a = s.phase + (REDUCED ? 0 : t*s.speed);
   return [s.planet.x + Math.cos(a)*s.orbit, s.planet.y + Math.sin(a)*s.orbit*0.92];
@@ -703,41 +870,7 @@ function drawSat(s, t){
     }
   }
 }
-function drawMeteor(m, t, dt){
-  if(m.dead) return;
-  const s = m.sat;
-  if(!REDUCED){
-    m.dist -= m.speed*dt; m.ang += 0.35*dt; m.rot += m.spin*dt;
-    if(m.dist < s.r + 3){ burst(s.x, s.y, "#ffb547", 6); m.dist = rand(s.r+50, s.r+90); m.ang = rand(0,6.283); }
-  }
-  const x = s.x + Math.cos(m.ang)*m.dist, y = s.y + Math.sin(m.ang)*m.dist;
-  m.x = x; m.y = y;
-  const tx = Math.cos(m.ang), ty = Math.sin(m.ang);
-  const g = ctx.createLinearGradient(x, y, x+tx*16, y+ty*16);
-  g.addColorStop(0, rgba("#ff7a45",.8)); g.addColorStop(1, rgba("#ff4d6d",0));
-  ctx.strokeStyle = g; ctx.lineWidth = m.size*1.1; ctx.lineCap="round";
-  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+tx*16, y+ty*16); ctx.stroke();
-  ctx.save(); ctx.translate(x,y); ctx.rotate(m.rot);
-  ctx.fillStyle = "#5b4a43"; ctx.strokeStyle = "#ff9b6b"; ctx.lineWidth = 1;
-  ctx.beginPath(); m.verts.forEach((v,k)=>{ const a=k/m.verts.length*6.283; ctx.lineTo(Math.cos(a)*m.size*v, Math.sin(a)*m.size*v); }); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.restore();
-}
-function drawPlan(t){
-  if(!plan) return;
-  const a = plan.phase + (REDUCED ? 0 : t*plan.speed);
-  plan.x = plan.planet.x + Math.cos(a)*plan.orbit; plan.y = plan.planet.y + Math.sin(a)*plan.orbit*0.92;
-  ctx.setLineDash([2,3]); ctx.strokeStyle = rgba("#5ef2ff", .8); ctx.lineWidth = 1.2;
-  ctx.beginPath(); ctx.arc(plan.x, plan.y, plan.r, 0, 6.283); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(plan.x-plan.r-3, plan.y); ctx.lineTo(plan.x+plan.r+3, plan.y); ctx.moveTo(plan.x, plan.y-plan.r-3); ctx.lineTo(plan.x, plan.y+plan.r+3); ctx.stroke();
-  ctx.setLineDash([]);
-}
-
-let last = performance.now()/1000;
-function frame(now){
-  const t = now/1000, dt = Math.min(.05, t - last); last = t;
-  ctx.clearRect(0,0,W,HH);
-  drawStars(t, dt);
-  // orbite
+function drawMapScene(t, dt){
   Object.values(planets).forEach(p => {
     if(p.sys.kind === "nebula") return;
     const rings = new Set(sats.filter(s=>s.planet===p).map(s=>s.orbit));
@@ -745,89 +878,511 @@ function frame(now){
     ctx.setLineDash([]);
   });
   if(plan){ ctx.strokeStyle = rgba("#5ef2ff",.08); ctx.setLineDash([1,6]); ctx.beginPath(); ctx.ellipse(plan.planet.x,plan.planet.y,plan.orbit,plan.orbit*.92,0,0,6.283); ctx.stroke(); ctx.setLineDash([]); }
-  // corpi
   Object.values(planets).forEach(p => {
     if(p.sys.kind === "nebula") drawNebula(p,t);
     else if(p.sys.kind === "station") drawStation(p,t);
     else drawPlanet(p,t);
   });
   sats.forEach(s => drawSat(s,t));
-  drawPlan(t);
-  const active = syncMeteors(t);
+  if(plan){
+    const a = plan.phase + (REDUCED ? 0 : t*plan.speed);
+    plan.x = plan.planet.x + Math.cos(a)*plan.orbit; plan.y = plan.planet.y + Math.sin(a)*plan.orbit*0.92;
+    ghostShip(plan.x, plan.y, plan.r);
+  }
+  mapThreats = syncMeteors(sats, meteors, t, 1);
   meteors.forEach(m => drawMeteor(m,t,dt));
-  // particelle
-  for(let k=parts.length-1;k>=0;k--){
-    const p = parts[k]; p.life -= dt; if(p.life<=0){ parts.splice(k,1); continue; }
-    p.x += p.vx*dt; p.y += p.vy*dt; p.vx*=.96; p.vy*=.96;
-    ctx.fillStyle = rgba(p.color, clamp(p.life/p.max,0,1)); ctx.fillRect(p.x-1,p.y-1,2.4,2.4);
-  }
-  for(let k=floats.length-1;k>=0;k--){
-    const f = floats[k]; f.life -= dt; if(f.life<=0){ floats.splice(k,1); continue; }
-    f.y -= 18*dt;
-    ctx.font = `600 11px "IBM Plex Mono", monospace`; ctx.textAlign="center"; ctx.textBaseline="middle";
-    ctx.fillStyle = rgba(f.color, clamp(f.life,0,1)); ctx.fillText(f.text, clamp(f.x, 60, W-60), f.y);
-  }
-  // etichette
   Object.values(planets).forEach(p => {
     const s = p.sys;
-    const below = s.kind === "nebula" ? p.y + p.r*.7 : p.y + p.r + (sats.filter(q=>q.planet===p).reduce((m,q)=>Math.max(m,q.orbit+q.r),0) || p.r) - p.r + 8;
-    const ly = Math.min(below, HH - 28);
+    const outer = sats.filter(q=>q.planet===p).reduce((m,q)=>Math.max(m,q.orbit+q.r),0) || p.r;
+    const below = s.kind === "nebula" ? p.y + p.r*.7 : p.y + outer + 8;
     const sub = s.kind === "nebula" ? "0 € · settore inesplorato" : `${pctU(s.w,1)} · ${eur0.format(s.value)}`;
-    label(p.x, ly, s.label.toUpperCase(), sub, s.color);
+    label(p.x, Math.min(below, HH - 28), s.label.toUpperCase(), sub, s.color);
   });
   sats.forEach(s => {
     if(s.h.w >= 0.025 || state.selected === s.h.id || state.hover === s.h.id){
-      ctx.font = `500 10px "IBM Plex Mono", monospace`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.font = `500 10px ${FONT_M}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = rgba("#e8f0ff", .9);
       const tw = ctx.measureText(s.h.sign).width;
       if(s.x + s.r + 6 + tw > W - 4){ ctx.textAlign = "right"; ctx.fillText(s.h.sign, s.x - s.r - 6, s.y); }
       else ctx.fillText(s.h.sign, s.x + s.r + 6, s.y);
     }
   });
-  // reticolo selezione / hover
-  const sel = state.selected, hv = state.hover || state.rosterHover;
   const target = id => {
     if(!id) return null;
     if(id.startsWith("sys:")){ const p = planets[id.slice(4)]; return p && {x:p.x,y:p.y,r:p.r}; }
     if(id === "plan") return plan && {x:plan.x,y:plan.y,r:plan.r};
     const s = sats.find(q=>q.h.id===id); return s && {x:s.x,y:s.y,r:s.r};
   };
+  const sel = state.selected, hv = state.hover || state.rosterHover;
   const ts = target(sel); if(ts) reticle(ts.x, ts.y, ts.r, "#5ef2ff", t);
   const th = target(hv); if(th && hv !== sel) reticle(th.x, th.y, th.r, rgba("#5ef2ff",.5), t);
-  $("threats").textContent = active;
+}
+
+/* ---- livello 1: sistema ---- */
+function drawGlobe(sc, t){
+  const {cx, cy, R} = sc, c = sc.s.color;
+  const atm = ctx.createRadialGradient(cx,cy,R*.9,cx,cy,R*1.4);
+  atm.addColorStop(0, rgba(c,.32)); atm.addColorStop(1, rgba(c,0));
+  ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(cx,cy,R*1.4,0,6.283); ctx.fill();
+  const g = ctx.createRadialGradient(cx-R*.4, cy-R*.45, R*.05, cx, cy, R);
+  g.addColorStop(0, rgba("#ffffff",.8)); g.addColorStop(.3, c); g.addColorStop(1, "#050a14");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.clip();
+  const rot = REDUCED ? 0 : t*0.05;
+  ctx.strokeStyle = rgba("#000000",.25); ctx.lineWidth = R*0.05;
+  for(let k=-3;k<=3;k++){ ctx.beginPath(); ctx.ellipse(cx + Math.sin(rot*3+k)*R*0.08, cy + k*R*0.27, R*1.15, R*0.09, -0.2, 0, 6.283); ctx.stroke(); }
+  // griglia olografica che ruota
+  ctx.strokeStyle = rgba(c,.3); ctx.lineWidth = 1;
+  for(let j=0;j<6;j++){ const ph = rot*4 + j*Math.PI/6; ctx.beginPath(); ctx.ellipse(cx,cy,Math.abs(Math.cos(ph))*R,R,0,0,6.283); ctx.stroke(); }
+  [-.6,-.3,0,.3,.6].forEach(l => { const y = cy + l*R, hw = R*Math.sqrt(1-l*l); ctx.beginPath(); ctx.moveTo(cx-hw,y); ctx.lineTo(cx+hw,y); ctx.stroke(); });
+  sc.lights.forEach(L => {
+    const x = cx + Math.cos(L.a)*L.d*R, y = cy + Math.sin(L.a)*L.d*R;
+    if((x - cx) + (y - cy) < R*0.15) return;
+    ctx.fillStyle = rgba("#ffe7a3", .3 + .4*Math.sin(t*2 + L.ph)); ctx.fillRect(x, y, 1.6, 1.6);
+  });
+  // fascio di scansione
+  if(!REDUCED){
+    const sx = cx - R + ((t*0.22) % 1)*2*R;
+    const sg = ctx.createLinearGradient(sx - R*0.3, 0, sx, 0);
+    sg.addColorStop(0, rgba("#5ef2ff",0)); sg.addColorStop(1, rgba("#5ef2ff",.3));
+    ctx.fillStyle = sg; ctx.fillRect(sx - R*0.3, cy - R, R*0.3, 2*R);
+    ctx.fillStyle = rgba("#bff8ff",.8); ctx.fillRect(sx, cy - R, 1.2, 2*R);
+  }
+  ctx.restore();
+  ctx.strokeStyle = rgba(c,.6); ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.stroke();
+}
+function drawSysSat(sc, it, t){
+  const e = eff(it.h), good = e.pnl >= 0, c = sc.s.color, r = it.r*it.k;
+  ctx.save(); ctx.globalAlpha *= it.depth < 0 ? 0.7 : 1;
+  ctx.shadowColor = good ? "#3dffb0" : "#ff4d6d"; ctx.shadowBlur = 16;
+  const g = ctx.createRadialGradient(it.x - r*.35, it.y - r*.4, r*.1, it.x, it.y, r);
+  g.addColorStop(0, rgba("#ffffff",.85)); g.addColorStop(.35, c); g.addColorStop(1, "#08101e");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(it.x,it.y,r,0,6.283); ctx.fill();
+  ctx.shadowBlur = 0; ctx.lineWidth = 1.5;
+  if(good){ ctx.strokeStyle = rgba("#3dffb0",.85); ctx.beginPath(); ctx.arc(it.x,it.y,r+4,0,6.283); ctx.stroke(); }
+  else {
+    ctx.strokeStyle = rgba("#ff4d6d",.95);
+    for(let k=0;k<6;k++){ if(Math.sin(t*9 + k*2.1 + it.phase*5) < -0.2) continue; const a0 = k*Math.PI/3 + .1; ctx.beginPath(); ctx.arc(it.x,it.y,r+4,a0,a0+.8); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function drawCargo(sc, it, t){
+  if(!it.ships.length || REDUCED || eff(it.h).pnl < 0) return;
+  const d = Math.hypot(it.x - sc.cx, it.y - sc.cy) || 1, ux = (it.x - sc.cx)/d, uy = (it.y - sc.cy)/d;
+  const ex = sc.cx + ux*sc.R*0.98, ey = sc.cy + uy*sc.R*0.98;
+  const mx = (it.x + ex)/2 - uy*22, my = (it.y + ey)/2 + ux*22;
+  it.ships.forEach((ph,k) => {
+    const f = (t*it.rate*0.35 + ph) % 1;
+    if(f < it.prev[k] && !trans){ burst(ex, ey, "#3dffb0", 5, .5); }
+    it.prev[k] = f;
+    const q = 1 - f;
+    const x = q*q*it.x + 2*q*f*mx + f*f*ex, y = q*q*it.y + 2*q*f*my + f*f*ey;
+    const dx = 2*q*(mx - it.x) + 2*f*(ex - mx), dy = 2*q*(my - it.y) + 2*f*(ey - my), a = Math.atan2(dy, dx);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+    ctx.fillStyle = rgba("#3dffb0", .25); ctx.fillRect(-9, -1, 6, 2);        // scia del motore
+    ctx.fillStyle = "#c9ffe9"; ctx.beginPath(); ctx.moveTo(4,0); ctx.lineTo(-3,-2.6); ctx.lineTo(-1.5,0); ctx.lineTo(-3,2.6); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+}
+function placeLabels(sc, list){
+  // list: {x, y, r, l1, l2, c1, c2, alpha}; i primi della lista hanno la precedenza
+  const placed = [];
+  list.forEach(L => {
+    ctx.font = `600 12px ${FONT_D}`; const w1 = ctx.measureText(L.l1).width;
+    ctx.font = `500 10px ${FONT_M}`; const w2 = ctx.measureText(L.l2).width;
+    const w = Math.max(w1, w2);
+    let left = L.x < sc.cx;
+    if(left && L.x - L.r - 8 - w < 4) left = false;
+    if(!left && L.x + L.r + 8 + w > W - 4) left = true;
+    const lx = left ? L.x - L.r - 8 : L.x + L.r + 8;
+    const x0 = left ? lx - w : lx, x1 = left ? lx : lx + w;
+    let dy = 0;
+    for(const cand of [0, 24, -24, 48, -48, 72, -72]){
+      const y0 = L.y + cand - 14, y1 = L.y + cand + 14;
+      if(!placed.some(B => x0 < B.x1 + 4 && x1 > B.x0 - 4 && y0 < B.y1 && y1 > B.y0)){ dy = cand; break; }
+    }
+    placed.push({x0, x1, y0:L.y + dy - 14, y1:L.y + dy + 14});
+    ctx.save(); ctx.globalAlpha *= L.alpha;
+    if(dy){ ctx.strokeStyle = rgba("#8195bb", .5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L.x + (left ? -L.r : L.r), L.y); ctx.lineTo(lx + (left ? 3 : -3), L.y + dy); ctx.stroke(); }
+    ctx.textAlign = left ? "right" : "left"; ctx.textBaseline = "middle";
+    ctx.font = `600 12px ${FONT_D}`; ctx.fillStyle = L.c1; ctx.fillText(L.l1, lx, L.y + dy - 7);
+    ctx.font = `500 10px ${FONT_M}`; ctx.fillStyle = L.c2; ctx.fillText(L.l2, lx, L.y + dy + 7);
+    ctx.restore();
+  });
+}
+function drawTally(sc, t){
+  let gain = 0, loss = 0;
+  sc.s.items.forEach(h => { const e = eff(h); if(e.pnl >= 0) gain += e.pnl; else loss += e.pnl; });
+  const u = REDUCED ? 1 : 1 - Math.pow(1 - clamp((t - enterT)/2.2, 0, 1), 3);
+  const cols = [["RISORSE ESTRATTE", sEur(gain*u), "#3dffb0"]];
+  if(loss < 0) cols.push(["DANNI DA METEORITI", sEur(loss*u), "#ff7a90"]);
+  cols.forEach(([lab, val, col], i) => {
+    const x = 16 + i*Math.min(210, W/2 - 8);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.font = `500 10px ${FONT_M}`; ctx.fillStyle = "#8195bb"; ctx.fillText(lab, x, 66);
+    ctx.font = `700 ${W < 480 ? 16 : 20}px ${FONT_D}`; ctx.fillStyle = col; ctx.fillText(val, x, 88);
+  });
+}
+function drawSonar(sc, t){
+  drawNebula({x:sc.cx, y:sc.cy, r:sc.R}, t);
+  const period = 2.6, maxR = Math.hypot(W, HH)*0.55;
+  const ph = REDUCED ? 0.5 : (t % period)/period;
+  const n = Math.floor(t/period);
+  if(n !== sc.pingN){ sc.pingN = n; if(view.level === "system" && !trans) sfx("ping"); }
+  for(let k=0;k<3;k++){
+    const q = (ph + k/3) % 1;
+    ctx.strokeStyle = rgba("#ff5fd2", .45*(1-q)); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(sc.cx, sc.cy, q*maxR, 0, 6.283); ctx.stroke();
+  }
+  const g = sc.ghost, dist = Math.hypot(g.x - sc.cx, g.y - sc.cy);
+  let a = REDUCED ? 1 : 0;
+  for(let k=0;k<3;k++){ const dq = ((ph + k/3) % 1)*maxR - dist; if(dq > 0 && dq < maxR*0.35) a = Math.max(a, 1 - dq/(maxR*0.35)); }
+  ctx.fillStyle = rgba("#ff5fd2", .25 + .75*a); ctx.beginPath(); ctx.arc(g.x, g.y, 5, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = rgba("#ff5fd2", .2 + .6*a); ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(g.x, g.y, 12, 0, 6.283); ctx.stroke();
+  const right = g.x + 140 > W;
+  ctx.textAlign = right ? "right" : "left"; ctx.textBaseline = "middle";
+  ctx.font = `600 11px ${FONT_D}`; ctx.fillStyle = rgba("#ff9be6", .45 + .55*a);
+  ctx.fillText("ECO DEBOLE", right ? g.x - 18 : g.x + 18, g.y - 7);
+  ctx.font = `400 10px ${FONT_M}`; ctx.fillStyle = rgba("#c9a8d8", .45 + .55*a);
+  ctx.fillText("ordine BTC · 6 nov 2024 · annullato", right ? g.x - 18 : g.x + 18, g.y + 8);
+  ctx.textAlign = "center";
+  ctx.font = `700 ${W < 480 ? 14 : 18}px ${FONT_D}`; ctx.fillStyle = "#ffd6f4";
+  ctx.fillText("NESSUNA POSIZIONE RILEVATA", sc.cx, sc.cy - 4);
+  ctx.font = `400 11px ${FONT_M}`; ctx.fillStyle = "#c9a8d8";
+  ctx.fillText("0 € · 0 posizioni crypto", sc.cx, sc.cy + 18);
+}
+function drawSystemScene(sc, t, dt){
+  if(!sc) return;
+  const s = sc.s, c = s.color;
+  if(s.kind === "nebula"){ drawSonar(sc, t); return; }
+  sc.sats.forEach(it => { const p = sysSatPos(sc, it, t); it.x = p.x; it.y = p.y; it.depth = p.depth; it.k = 1 + 0.18*p.depth; });
+  if(sc.plan){
+    const a = sc.plan.phase + (REDUCED ? 0 : t*sc.plan.speed);
+    sc.plan.x = sc.cx + Math.cos(a)*sc.plan.orbit; sc.plan.y = sc.cy + Math.sin(a)*sc.plan.orbit*TILT;
+  }
+  const rings = sc.sats.map(it => it.orbit).concat(sc.plan ? [sc.plan.orbit] : []);
+  const ring = (o, a0, a1, al) => { ctx.strokeStyle = rgba(c, al); ctx.setLineDash([3,5]); ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(sc.cx, sc.cy, o, o*TILT, 0, a0, a1); ctx.stroke(); ctx.setLineDash([]); };
+  rings.forEach(o => ring(o, Math.PI, 2*Math.PI, .14));                  // metà posteriore, dietro il pianeta
+  sc.sats.filter(it => it.depth < 0).forEach(it => drawSysSat(sc, it, t));
+  if(s.kind === "station"){
+    drawStation({x:sc.cx, y:sc.cy, r:sc.R, sys:s}, t);
+    for(let k=0;k<6;k++){                                                     // luci di attracco
+      const a = k*Math.PI/3 + (REDUCED ? 0 : t*.25), on = Math.sin(t*3 + k) > .2;
+      ctx.fillStyle = on ? "#fff3cf" : rgba("#f2c46d", .3);
+      ctx.beginPath(); ctx.arc(sc.cx + Math.cos(a)*sc.R*1.25, sc.cy + Math.sin(a)*sc.R*1.25, 2.5, 0, 6.283); ctx.fill();
+    }
+  } else drawGlobe(sc, t);
+  sc.sats.forEach(it => drawCargo(sc, it, t));
+  rings.forEach(o => ring(o, 0, Math.PI, .24));                            // metà anteriore
+  sc.sats.filter(it => it.depth >= 0).forEach(it => drawSysSat(sc, it, t));
+  if(sc.plan) ghostShip(sc.plan.x, sc.plan.y, sc.plan.r);
+  syncMeteors(sc.sats, sysMeteors, t, 1.7);
+  sysMeteors.forEach(m => drawMeteor(m, t, dt));
+  const labels = [...sc.sats].sort((a,b) => b.depth - a.depth || b.r - a.r).map(it => {
+    const e = eff(it.h);
+    return {x:it.x, y:it.y, r:it.r*it.k + 2, l1:it.h.sign, l2:`${eur0.format(e.value)} · ${pct(e.pct)}`, c1:"#e8f0ff", c2:e.pnl >= 0 ? "#3dffb0" : "#ff7a90", alpha:it.depth < 0 ? .75 : 1};
+  });
+  if(sc.plan) labels.push({x:sc.plan.x, y:sc.plan.y, r:sc.plan.r + 4, l1:"CANTIERE · AMUNDI WORLD", l2:`PAC ${eur0.format(SNAP.plan.amount)}/mese · 0 quote`, c1:"#5ef2ff", c2:"#8195bb", alpha:1});
+  placeLabels(sc, labels);
+  drawTally(sc, t);
+}
+
+/* ---- livello 2: avvicinamento ---- */
+const fmtP = v => v.toLocaleString("it-IT", v >= 100 ? {maximumFractionDigits:0} : {minimumFractionDigits:2, maximumFractionDigits:2});
+function drawTelemetry(sc, t){
+  const {x, y, w, h} = sc.chart, data = CHARTS[sc.h.isin] || [], n = data.length;
+  if(n < 2) return;
+  const costU = sc.h.cost / sc.h.qty, c = "#5ef2ff";
+  ctx.fillStyle = rgba("#0a1120", .78); ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = rgba(c,.22); ctx.lineWidth = 1; ctx.strokeRect(x+.5, y+.5, w-1, h-1);
+  ctx.strokeStyle = c; ctx.lineWidth = 2;
+  [[x,y,1,1],[x+w,y,-1,1],[x+w,y+h,-1,-1],[x,y+h,1,-1]].forEach(([ax,ay,sx,sy]) => { ctx.beginPath(); ctx.moveTo(ax, ay+sy*12); ctx.lineTo(ax,ay); ctx.lineTo(ax+sx*12, ay); ctx.stroke(); });
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.font = `600 11px ${FONT_D}`; ctx.fillStyle = c;
+  ctx.fillText("TELEMETRIA PREZZO · 12 MESI", x+12, y+20);
+  const px = x + 54, py = y + 34, pw = w - 54 - 14, ph = h - 34 - 28;
+  const first = data.findIndex(v => v != null), vals = data.filter(v => v != null);
+  let lo = Math.min(...vals, costU), hi = Math.max(...vals, costU);
+  const pad = (hi - lo)*0.08 || 1; lo -= pad; hi += pad;
+  const X = i => px + pw*(i - first)/(n - 1 - first), Y = v => py + ph*(1 - (v-lo)/(hi-lo));
+  sc.plot = {px, py, pw, ph, n, first};
+  ctx.font = `400 10px ${FONT_M}`; ctx.textAlign = "right";
+  for(let k=0;k<=3;k++){
+    const v = lo + (hi-lo)*k/3, yy = Y(v);
+    ctx.strokeStyle = "#1c2b47"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, yy); ctx.lineTo(px+pw, yy); ctx.stroke();
+    ctx.fillStyle = "#8195bb"; ctx.fillText(fmtP(v), px-6, yy+3);
+  }
+  ctx.textAlign = "left"; ctx.fillText((first > 0 ? "quotata dal " : "") + CHART_DATES[first], px, py+ph+17);
+  ctx.textAlign = "right"; ctx.fillText(CHART_DATES[n-1], px+pw, py+ph+17);
+  // rivelazione progressiva della traccia
+  const reveal = REDUCED ? 1 : clamp((t - enterT)/1.6, 0, 1);
+  const last = Math.max(first + 1, Math.round(first + reveal*(n - 1 - first)));
+  const cy0 = Y(costU);
+  const area = new Path2D(); area.moveTo(X(first), cy0);
+  for(let i=first;i<=last;i++) area.lineTo(X(i), Y(data[i]));
+  area.lineTo(X(last), cy0); area.closePath();
+  ctx.save(); ctx.beginPath(); ctx.rect(px, py, pw, cy0 - py); ctx.clip(); ctx.fillStyle = rgba("#3dffb0", .16); ctx.fill(area); ctx.restore();
+  ctx.save(); ctx.beginPath(); ctx.rect(px, cy0, pw, py + ph - cy0); ctx.clip(); ctx.fillStyle = rgba("#ff4d6d", .2); ctx.fill(area); ctx.restore();
+  ctx.setLineDash([5,4]); ctx.strokeStyle = "#ffb547"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(px, cy0); ctx.lineTo(px+pw, cy0); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = `500 10px ${FONT_M}`; ctx.fillStyle = "#ffb547"; ctx.textAlign = "left";
+  ctx.fillText(`carico medio ${eur.format(costU)}`, px + 6, cy0 + (cy0 - py < 16 ? 13 : -5));
+  ctx.save(); ctx.shadowColor = c; ctx.shadowBlur = 8; ctx.strokeStyle = c; ctx.lineWidth = 1.8; ctx.lineJoin = "round";
+  ctx.beginPath(); for(let i=first;i<=last;i++){ if(i === first) ctx.moveTo(X(i), Y(data[i])); else ctx.lineTo(X(i), Y(data[i])); }
+  ctx.stroke(); ctx.restore();
+  const hx = X(last), hy = Y(data[last]);
+  ctx.fillStyle = c; ctx.beginPath(); ctx.arc(hx, hy, 3 + (REDUCED ? 0 : 1.5*Math.abs(Math.sin(t*4))), 0, 6.283); ctx.fill();
+  if(reveal >= 1){
+    ctx.font = `600 11px ${FONT_M}`; ctx.fillStyle = "#e8f0ff"; ctx.textAlign = "right";
+    ctx.fillText(eur.format(data[n-1]), hx - 8, hy + (hy - py < 20 ? 16 : -9));
+  }
+  const hi_ = state.chartHover;
+  if(hi_ != null && hi_ >= first && hi_ < n && reveal >= 1){
+    const vx = X(hi_), v = data[hi_], vy = Y(v), diff = v/costU - 1;
+    ctx.strokeStyle = rgba(c,.5); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(vx, py); ctx.lineTo(vx, py+ph); ctx.stroke();
+    ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(vx, vy, 3.5, 0, 6.283); ctx.fill();
+    const l1 = `${CHART_DATES[hi_]} · ${eur.format(v)}`, l2 = `vs carico ${pct(diff)}`;
+    ctx.font = `500 11px ${FONT_M}`;
+    const bw = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width) + 16, bh = 38;
+    let bx = vx + 10; if(bx + bw > x + w - 4) bx = vx - 10 - bw;
+    const by = clamp(vy - bh - 8, y + 4, y + h - bh - 4);
+    ctx.fillStyle = rgba("#060c18", .95); ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = c; ctx.strokeRect(bx+.5, by+.5, bw-1, bh-1);
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#e8f0ff"; ctx.fillText(l1, bx+8, by+15);
+    ctx.fillStyle = diff >= 0 ? "#3dffb0" : "#ff7a90"; ctx.fillText(l2, bx+8, by+30);
+  }
+}
+function drawApproachScene(sc, t, dt){
+  if(!sc) return;
+  const h = sc.h, e = eff(h), good = e.pnl >= 0, c = SYS[h.sys].color, {cx, cy, R} = sc;
+  sc.sat.x = cx; sc.sat.y = cy; sc.sat.r = R;
+  const atm = ctx.createRadialGradient(cx,cy,R*.9,cx,cy,R*1.7);
+  atm.addColorStop(0, rgba(c,.28)); atm.addColorStop(1, rgba(c,0));
+  ctx.fillStyle = atm; ctx.beginPath(); ctx.arc(cx,cy,R*1.7,0,6.283); ctx.fill();
+  ctx.strokeStyle = rgba(c,.4); ctx.lineWidth = Math.max(2, R*0.035);
+  ctx.beginPath(); ctx.ellipse(cx, cy, R*1.75, R*0.36, -0.22, Math.PI, 2*Math.PI); ctx.stroke();
+  const g = ctx.createRadialGradient(cx-R*.4, cy-R*.45, R*.05, cx, cy, R);
+  g.addColorStop(0, rgba("#ffffff",.85)); g.addColorStop(.3, c); g.addColorStop(1, "#050a14");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx,cy,R,0,6.283); ctx.clip();
+  const rot = REDUCED ? 0 : t*0.025;
+  sc.craters.forEach(cr => {
+    const u = ((cr.u + rot) % 1)*2.4 - 1.2, w = Math.sqrt(Math.max(0, 1 - u*u));
+    if(w <= 0) return;
+    ctx.fillStyle = rgba("#000000", .16); ctx.strokeStyle = rgba("#ffffff", .1); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(cx + u*R, cy + cr.v*R, Math.max(.5, cr.r*R*w), cr.r*R*.8, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+  });
+  const sh = ctx.createLinearGradient(cx - R*.2, cy - R*.2, cx + R, cy + R);
+  sh.addColorStop(0, rgba("#000000",0)); sh.addColorStop(1, rgba("#000000",.55));
+  ctx.fillStyle = sh; ctx.fillRect(cx-R, cy-R, 2*R, 2*R);
+  ctx.restore();
+  ctx.strokeStyle = rgba(c,.7); ctx.lineWidth = Math.max(2, R*0.035);
+  ctx.beginPath(); ctx.ellipse(cx, cy, R*1.75, R*0.36, -0.22, 0, Math.PI); ctx.stroke();
+  const SR = R*1.3;
+  if(good){
+    const pulse = .5 + .5*Math.sin(t*2.2);
+    ctx.strokeStyle = rgba("#3dffb0", .35 + .3*pulse); ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(cx,cy,SR,0,6.283); ctx.stroke();
+    ctx.fillStyle = rgba("#3dffb0", .04 + .03*pulse); ctx.fill();
+    for(let k=0;k<36;k++){
+      const a = k/36*6.283 + (REDUCED ? 0 : t*.08);
+      ctx.fillStyle = rgba("#3dffb0", .2 + .55*Math.max(0, Math.sin(a*3 - t*2)));
+      ctx.fillRect(cx + Math.cos(a)*SR - 1.2, cy + Math.sin(a)*SR - 1.2, 2.4, 2.4);
+    }
+  } else {
+    ctx.strokeStyle = rgba("#ff4d6d", .9); ctx.lineWidth = 2;
+    for(let k=0;k<10;k++){ if(Math.sin(t*7 + k*1.9) < -0.1) continue; const a0 = k*0.628 + .1; ctx.beginPath(); ctx.arc(cx,cy,SR,a0,a0+.42); ctx.stroke(); }
+    for(let k=0;k<5;k++){
+      if(Math.random() < .5) continue;
+      const a = rand(0,6.283), d = R + rand(2,10);
+      ctx.strokeStyle = rgba(Math.random() < .5 ? "#ffd37a" : "#ff4d6d", .9);
+      ctx.beginPath(); ctx.moveTo(cx+Math.cos(a)*d, cy+Math.sin(a)*d); ctx.lineTo(cx+Math.cos(a)*(d+6), cy+Math.sin(a)*(d+6)); ctx.stroke();
+    }
+  }
+  syncMeteors([sc.sat], apMeteors, t, 1.6);
+  apMeteors.forEach(m => drawMeteor(m, t, dt));
+  const tx = sc.narrow ? cx + R*1.85 : cx, ty = sc.narrow ? cy - R*0.45 : cy + SR + 30;
+  ctx.textAlign = sc.narrow ? "left" : "center"; ctx.textBaseline = "alphabetic";
+  ctx.font = `700 ${sc.narrow ? 18 : 26}px ${FONT_D}`; ctx.fillStyle = "#e8f0ff"; ctx.fillText(h.sign, tx, ty);
+  ctx.font = `500 12px ${FONT_M}`; ctx.fillStyle = good ? "#3dffb0" : "#ff7a90";
+  ctx.fillText(`${sEur(e.pnl)} · ${pct(e.pct)}`, tx, ty + 20);
+  ctx.fillStyle = "#8195bb"; ctx.fillText(`${eur0.format(e.value)} · peso ${pctU(h.w,1)}`, tx, ty + 37);
+  drawTelemetry(sc, t);
+}
+
+/* ---- navigazione tra i livelli ---- */
+function drawLevel(v, t, dt){
+  if(v.level === "map") drawMapScene(t, dt);
+  else if(v.level === "system") drawSystemScene(SC.sys, t, dt);
+  else drawApproachScene(SC.ap, t, dt);
+}
+function startTrans(dir, outer, inner, focus, target, dur){
+  const now = performance.now()/1000;
+  trans = {dir, outer, inner, focus, target, t0:now, dur: REDUCED ? 0.001 : dur};
+  enterT = dir > 0 ? now + dur*0.55 : -1e9;
+  $("tip").hidden = true; state.hover = null; state.chartHover = null;
+}
+function dive(step){
+  const fast = queue.length ? 0.7 : 1;
+  if(step.level === "system"){
+    SC.sys = buildSystem(step.sys); sysMeteors.length = 0;
+    const p = planets[step.sys];
+    startTrans(+1, {level:"map"}, {level:"system", sys:step.sys}, {x:p.x, y:p.y, r:p.r}, {x:SC.sys.cx, y:SC.sys.cy, r:SC.sys.R}, 1.15*fast);
+    select("sys:" + step.sys);
+  } else {
+    SC.ap = buildApproach(step.id); apMeteors.length = 0;
+    const it = SC.sys.sats.find(q => q.h.id === step.id);
+    const pos = sysSatPos(SC.sys, it, performance.now()/1000);
+    startTrans(+1, {level:"system", sys:step.sys}, {level:"approach", sys:step.sys, id:step.id}, {x:pos.x, y:pos.y, r:it.r*(1 + 0.18*pos.depth)}, {x:SC.ap.cx, y:SC.ap.cy, r:SC.ap.R}, 1.0*fast);
+    select(step.id);
+  }
+  sfx("whoosh");
+}
+function back(){
+  const fast = queue.length ? 0.7 : 1;
+  if(view.level === "approach"){
+    const it = SC.sys.sats.find(q => q.h.id === view.id);
+    const pos = sysSatPos(SC.sys, it, performance.now()/1000);
+    startTrans(-1, {level:"system", sys:view.sys}, {level:"approach", sys:view.sys, id:view.id}, {x:pos.x, y:pos.y, r:it.r*(1 + 0.18*pos.depth)}, {x:SC.ap.cx, y:SC.ap.cy, r:SC.ap.R}, .85*fast);
+    select("sys:" + view.sys);
+  } else if(view.level === "system"){
+    const p = planets[view.sys];
+    startTrans(-1, {level:"map"}, {level:"system", sys:view.sys}, {x:p.x, y:p.y, r:p.r}, {x:SC.sys.cx, y:SC.sys.cy, r:SC.sys.R}, .95*fast);
+  }
+  sfx("back");
+}
+function runNext(){ const s = queue.shift(); if(!s) return; if(s.back) back(); else dive(s); }
+function goTo(tgt){
+  if(trans) return;
+  const steps = [];
+  let cur = {...view};
+  const contains = (a, b) => a.level === "map" || (a.level === "system" && b.level !== "map" && a.sys === b.sys) || (a.level === "approach" && b.level === "approach" && a.id === b.id);
+  while(!contains(cur, tgt)){ steps.push({back:true}); cur = cur.level === "approach" ? {level:"system", sys:cur.sys} : {level:"map"}; }
+  if(cur.level === "map" && tgt.level !== "map"){ steps.push({level:"system", sys:tgt.sys}); cur = {level:"system", sys:tgt.sys}; }
+  if(cur.level === "system" && tgt.level === "approach") steps.push({level:"approach", sys:tgt.sys, id:tgt.id});
+  queue = steps; runNext();
+}
+function goUp(){
+  if(view.level === "approach") goTo({level:"system", sys:view.sys});
+  else if(view.level === "system") goTo({level:"map"});
+}
+function renderCrumbs(){
+  const parts = [`<button class="crumb${view.level === "map" ? " on" : ""}" data-go="map">Mappa</button>`];
+  if(view.level !== "map") parts.push(`<span aria-hidden="true">›</span><button class="crumb${view.level === "system" ? " on" : ""}" data-go="system">${esc(SYS[view.sys].label)}</button>`);
+  if(view.level === "approach") parts.push(`<span aria-hidden="true">›</span><span class="crumb on">${esc(SC.ap.h.sign)}</span>`);
+  $("crumbs").innerHTML = (view.level !== "map" ? `<button class="btn back" id="back-btn">← Risali</button>` : "") + `<nav aria-label="Posizione nella mappa">${parts.join("")}</nav>`;
+  const bb = $("back-btn"); if(bb) bb.addEventListener("click", goUp);
+  $("crumbs").querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
+    if(b.dataset.go === "map") goTo({level:"map"}); else goTo({level:"system", sys:view.sys});
+  }));
+  $("map-hint").textContent = view.level === "map" ? "Clicca un pianeta per entrare in orbita, un satellite per avvicinarti"
+    : view.level === "system" ? (view.sys === "crypto" ? "Il sonar scansiona il settore · Esc per risalire" : "Clicca un satellite per avvicinarti · Esc per risalire")
+    : "Passa sul grafico per leggere i prezzi · Esc per risalire";
+}
+
+/* ---- ciclo principale ---- */
+let last = performance.now()/1000;
+function frame(now){
+  const t = now/1000, dt = Math.min(.05, t - last); last = t;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,W,HH);
+  if(trans){
+    const tr = trans, e = clamp((t - tr.t0)/tr.dur, 0, 1), p = tr.dir > 0 ? easeIO(e) : 1 - easeIO(e);
+    const f = tr.focus, g = tr.target, K = g.r / f.r, k = Math.pow(K, p);
+    const cx = f.x + (g.x - f.x)*p, cy = f.y + (g.y - f.y)*p;
+    drawStars(t, Math.sin(p*Math.PI), cx, cy);
+    ctx.save(); ctx.globalAlpha = 1 - smooth(.3, .75, p);
+    ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-f.x, -f.y);
+    if(ctx.globalAlpha > .01) drawLevel(tr.outer, t, dt);
+    ctx.restore();
+    const s = k / K;
+    ctx.save(); ctx.globalAlpha = smooth(.35, .85, p);
+    ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-g.x, -g.y);
+    if(ctx.globalAlpha > .01) drawLevel(tr.inner, t, dt);
+    ctx.restore();
+    if(e >= 1){
+      trans = null;
+      const v = tr.dir > 0 ? tr.inner : tr.outer;
+      view.level = v.level; view.sys = v.sys || null; view.id = v.id || null;
+      renderCrumbs(); select(state.selected); runNext();
+    }
+  } else {
+    drawStars(t, 0, W/2, HH/2);
+    drawLevel(view, t, dt);
+  }
+  for(let k=parts.length-1;k>=0;k--){
+    const p = parts[k]; p.life -= dt; if(p.life<=0){ parts.splice(k,1); continue; }
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vx*=.96; p.vy*=.96;
+    ctx.fillStyle = rgba(p.color, clamp(p.life/p.max,0,1)); ctx.fillRect(p.x-1,p.y-1,2.4,2.4);
+  }
+  for(let k=floats.length-1;k>=0;k--){
+    const fl = floats[k]; fl.life -= dt; if(fl.life<=0){ floats.splice(k,1); continue; }
+    fl.y -= 18*dt;
+    ctx.font = `600 11px ${FONT_M}`; ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.fillStyle = rgba(fl.color, clamp(fl.life,0,1)); ctx.fillText(fl.text, clamp(fl.x, 60, W-60), fl.y);
+  }
+  $("threats").textContent = mapThreats;
   requestAnimationFrame(frame);
 }
 
 /* ---- interazione ---- */
-function pick(x, y){
-  for(const m of meteors){ if(!m.dead && m.x!==undefined && Math.hypot(m.x-x, m.y-y) < 14) return {type:"meteor", m}; }
-  for(let k=sats.length-1;k>=0;k--){ const s=sats[k]; if(Math.hypot(s.x-x, s.y-y) < Math.max(s.r+4, 11)) return {type:"sat", id:s.h.id, s}; }
-  if(plan && Math.hypot(plan.x-x, plan.y-y) < 13) return {type:"plan", id:"plan"};
+function pickMeteor(arr, x, y, rad){
+  for(const m of arr){ if(!m.dead && m.x !== undefined && Math.hypot(m.x-x, m.y-y) < rad) return {type:"meteor", m}; }
+  return null;
+}
+function pickMap(x, y){
+  const mh = pickMeteor(meteors, x, y, 14); if(mh) return mh;
+  for(let k=sats.length-1;k>=0;k--){ const s=sats[k]; if(s.x !== undefined && Math.hypot(s.x-x, s.y-y) < Math.max(s.r+4, 11)) return {type:"sat", id:s.h.id, h:s.h}; }
+  if(plan && plan.x !== undefined && Math.hypot(plan.x-x, plan.y-y) < 13) return {type:"plan", id:"plan"};
   for(const p of Object.values(planets)){
     const rr = p.sys.kind === "nebula" ? p.r*1.2 : p.r + 4;
-    if(Math.hypot(p.x-x, p.y-y) < rr) return {type:"sys", id:"sys:"+p.sys.key, p};
+    if(Math.hypot(p.x-x, p.y-y) < rr) return {type:"sys", id:"sys:"+p.sys.key, s:p.sys};
   }
   return null;
 }
+function pickSystem(x, y){
+  const sc = SC.sys; if(!sc) return null;
+  const mh = pickMeteor(sysMeteors, x, y, 20); if(mh) return mh;
+  for(const it of [...sc.sats].sort((a,b) => b.depth - a.depth)){
+    if(it.x !== undefined && Math.hypot(it.x-x, it.y-y) < Math.max(it.r*it.k + 6, 14)) return {type:"sat", id:it.h.id, h:it.h};
+  }
+  if(sc.plan && sc.plan.x !== undefined && Math.hypot(sc.plan.x-x, sc.plan.y-y) < 16) return {type:"plan", id:"plan"};
+  if(sc.ghost && Math.hypot(sc.ghost.x-x, sc.ghost.y-y) < 18) return {type:"ghost"};
+  if(Math.hypot(sc.cx-x, sc.cy-y) < sc.R) return {type:"body", s:sc.s};
+  return null;
+}
+function pickApproach(x, y){
+  const sc = SC.ap; if(!sc) return null;
+  return pickMeteor(apMeteors, x, y, 22);
+}
+function pick(x, y){
+  if(trans) return null;
+  return view.level === "map" ? pickMap(x,y) : view.level === "system" ? pickSystem(x,y) : pickApproach(x,y);
+}
 function showTip(hit, x, y){
   const tip = $("tip");
-  if(!hit || hit.type === "meteor"){
-    if(hit){ tip.innerHTML = `<div class="t" style="color:var(--loss)">METEORITE</div><div class="r">bersaglio <b>${esc(hit.m.sat.h.sign)}</b></div><div class="r">clic</div><b>per abbatterlo</b>`; }
-    else { tip.hidden = true; return; }
+  if(!hit){ tip.hidden = true; return; }
+  if(hit.type === "meteor"){
+    tip.innerHTML = `<div class="t" style="color:var(--loss)">METEORITE</div><div class="r">bersaglio <b>${esc(hit.m.sat.h.sign)}</b></div><div class="r">clic <b>per abbatterlo</b></div>`;
   } else if(hit.type === "sat"){
-    const h = hit.s.h, e = eff(h);
+    const h = hit.h, e = eff(h);
     tip.innerHTML = `<div class="t">${esc(h.sign)}</div>
       <div class="r">controvalore <b class="num">${eur.format(e.value)}</b></div>
       <div class="r">peso <b class="num">${pctU(h.w,2)}</b></div>
-      <div class="r">PnL <b class="num ${cls(e.pnl)}">${sEur(e.pnl)} · ${pct(e.pct)}</b></div>`;
+      <div class="r">PnL <b class="num ${cls(e.pnl)}">${sEur(e.pnl)} · ${pct(e.pct)}</b></div>
+      <div class="r">clic <b>per avvicinarti</b></div>`;
   } else if(hit.type === "plan"){
     tip.innerHTML = `<div class="t" style="color:var(--scan)">NAVE IN COSTRUZIONE</div><div class="r">PAC <b>${eur0.format(SNAP.plan.amount)}/mese</b></div><div class="r">quote <b>0</b></div>`;
+  } else if(hit.type === "ghost"){
+    tip.innerHTML = `<div class="t" style="color:var(--nebula)">ECO DEBOLE</div><div class="r">ordine BTC <b>6 nov 2024</b></div><div class="r">stato <b>annullato</b></div>`;
   } else {
-    const s = hit.p.sys;
+    const s = hit.s;
     tip.innerHTML = `<div class="t" style="color:${s.color}">${esc(s.label.toUpperCase())}</div>
       <div class="r">controvalore <b class="num">${eur.format(s.value)}</b></div>
       <div class="r">peso <b class="num">${pctU(s.w,1)}</b></div>
-      <div class="r">posizioni <b class="num">${s.items.length}</b></div>`;
+      <div class="r">posizioni <b class="num">${s.items.length}</b></div>
+      ${view.level === "map" ? `<div class="r">clic <b>per entrare in orbita</b></div>` : ""}`;
   }
   tip.hidden = false;
   const bw = wrap.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
@@ -838,31 +1393,48 @@ function local(ev){ const r = cv.getBoundingClientRect(); return [ev.clientX - r
 cv.addEventListener("pointermove", ev => {
   if(ev.pointerType === "touch") return;
   const [x,y] = local(ev); const hit = pick(x,y);
-  state.hover = hit && hit.id || null;
-  cv.style.cursor = hit ? "pointer" : "crosshair";
+  state.hover = view.level === "map" && hit && hit.id || null;
+  if(view.level === "approach" && SC.ap && SC.ap.plot && !trans){
+    const P = SC.ap.plot;
+    state.chartHover = (x >= P.px && x <= P.px + P.pw && y >= P.py && y <= P.py + P.ph) ? P.first + Math.round((x - P.px)/P.pw*(P.n - 1 - P.first)) : null;
+  }
+  cv.style.cursor = hit ? "pointer" : state.chartHover != null ? "none" : "crosshair";
   showTip(hit, x, y);
 });
-cv.addEventListener("pointerleave", () => { state.hover = null; $("tip").hidden = true; });
+cv.addEventListener("pointerleave", () => { state.hover = null; state.chartHover = null; $("tip").hidden = true; });
 cv.addEventListener("click", ev => {
   const [x,y] = local(ev); const hit = pick(x,y);
   if(!hit) return;
   if(hit.type === "meteor"){
-    const m = hit.m, h = m.sat.h, e = eff(h);
+    const m = hit.m, h = m.sat.h, e = eff(h), k = m.k || 1;
     m.dead = true; m.respawn = performance.now()/1000 + rand(3,6);
-    burst(m.x, m.y, "#ffb547", 18); burst(m.x, m.y, "#ff4d6d", 8);
+    burst(m.x, m.y, "#ffb547", 18, k); burst(m.x, m.y, "#ff4d6d", 8, k);
     floats.push({x:m.x, y:m.y-8, text:`${h.sign} ${sEur(e.pnl)}`, color:"#ff8aa0", life:1.6});
     state.score++; $("score").textContent = state.score;
+    sfx("boom");
     return;
   }
-  select(hit.id);
+  if(hit.type === "sys") return goTo({level:"system", sys:hit.s.key});
+  if(hit.type === "sat") return goTo({level:"approach", sys:hit.h.sys, id:hit.id});
+  if(hit.type === "plan"){ sfx("blip"); return select("plan"); }
+  if(hit.type === "ghost" || hit.type === "body"){ sfx("blip"); return select("sys:" + view.sys); }
 });
-addEventListener("keydown", ev => { if(ev.key === "Escape"){ select("sys:core"); } });
+addEventListener("keydown", ev => {
+  if(ev.key !== "Escape") return;
+  if(view.level !== "map") goUp(); else select("sys:core");
+});
 
 $("drill").addEventListener("click", () => {
   state.drill = !state.drill;
   $("drill").setAttribute("aria-pressed", state.drill);
   $("drill").textContent = state.drill ? "Fine esercitazione" : "Esercitazione Red Alert −30%";
   renderHUD(); renderRoster(); select(state.selected); renderIntel();
+});
+$("audio").addEventListener("click", () => {
+  AU.on = !AU.on;
+  $("audio").setAttribute("aria-pressed", AU.on);
+  $("audio").textContent = AU.on ? "Audio on" : "Audio off";
+  if(AU.on) sfx("blip");
 });
 
 /* ======================= HYPERDRIVE ======================= */
@@ -934,6 +1506,6 @@ function renderIntel(){
 
 /* ======================= BOOT ======================= */
 $("foot").textContent = `Fonte: Scalable Capital (MCP), portafoglio "${SNAP.portfolio}", istantanea del ${SNAP.asOf}. Controvalori = quantità × prezzo mid; PnL dall'acquisto e variazioni di prezzo come riportati da Scalable. La pagina non si aggiorna da sola e non può inviare ordini.`;
-renderHUD(); renderRoster(); select("sys:core"); renderHyper(); renderIntel();
+renderHUD(); renderRoster(); select("sys:core"); renderHyper(); renderIntel(); renderCrumbs();
 requestAnimationFrame(t => { last = t/1000; frame(t); });
 </script>
