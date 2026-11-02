@@ -1,0 +1,1095 @@
+<title>Galactic Portfolio Command</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oxanium:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Plancia di comando: mappa stellare su canvas a sinistra, colonna Holo-Log a destra; sotto i 900px la colonna scende sotto la mappa.
+   Mondo visivo unico e volutamente scuro (schermo arcade): niente tema chiaro. */
+:root{
+  --void:#03050c; --panel:rgba(10,17,36,.84); --panel-2:rgba(16,26,52,.72);
+  --line:#1a2747; --line-hi:#2c4373;
+  --ink:#dbe6ff; --ink-2:#93a6cf; --ink-3:#62759e;
+  --shield:#3ff0ff; --profit:#4dffb0; --loss:#ff4d6a; --warn:#ffb547; --nd:#7f8cab;
+  --c-equity:#ff9f5a; --c-etf:#5ec8ff; --c-crypto:#d26bff; --c-safe:#ffd27a;
+  --f-display:"Oxanium","Eurostile","Bank Gothic",ui-sans-serif,system-ui,sans-serif;
+  --f-data:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--void); color:var(--ink);
+  font:13px/1.5 var(--f-data); -webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse at 15% -10%,rgba(63,240,255,.07),transparent 55%),
+                   radial-gradient(ellipse at 100% 110%,rgba(210,107,255,.07),transparent 55%);
+}
+#root{height:100%}
+.app{
+  height:100%; max-width:1680px; margin:0 auto;
+  display:grid; grid-template-rows:auto minmax(0,1fr); gap:10px;
+  padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.is-alert{--shield:var(--loss)}
+
+/* ---------- cornici HUD ---------- */
+.frame{position:relative; background:var(--panel); border:1px solid var(--line)}
+.frame::before,.frame::after{
+  content:""; position:absolute; width:12px; height:12px; pointer-events:none;
+  border:2px solid var(--shield); opacity:.85; transition:border-color .3s;
+}
+.frame::before{top:-1px; left:-1px; border-right:0; border-bottom:0}
+.frame::after{bottom:-1px; right:-1px; border-left:0; border-top:0}
+
+.lbl{font:600 10px/1.2 var(--f-display); letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3)}
+.val{font:600 22px/1.1 var(--f-display); letter-spacing:.01em; font-variant-numeric:tabular-nums}
+.sub{font-size:11px; color:var(--ink-2)}
+.up{color:var(--profit)} .down{color:var(--loss)} .nd{color:var(--nd)} .flat{color:var(--ink-2)}
+.val.up{text-shadow:0 0 14px rgba(77,255,176,.45)}
+.val.down{text-shadow:0 0 14px rgba(255,77,106,.5)}
+
+/* ---------- barra superiore ---------- */
+.top{display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px 30px; padding:12px 16px}
+.brand h1{margin:3px 0 1px; font:700 clamp(18px,2.1vw,25px)/1.1 var(--f-display); letter-spacing:.02em; text-wrap:balance}
+.brand h1 em{font-style:normal; color:var(--shield); text-shadow:0 0 14px rgba(63,240,255,.55)}
+.stat{display:flex; flex-direction:column; gap:2px; min-width:0}
+.cells{display:flex; gap:2px; margin:5px 0 3px}
+.cells i{width:7px; height:15px; background:var(--line); transform:skewX(-14deg)}
+.cells i.on{background:var(--cell); box-shadow:0 0 6px var(--cell)}
+.cells.ok{--cell:var(--shield)} .cells.mid{--cell:var(--warn)} .cells.low{--cell:var(--loss)}
+.tabs{margin-left:auto; display:flex; flex-wrap:wrap; gap:6px}
+button{font:inherit; color:inherit; background:none; border:0; cursor:pointer; padding:0}
+button:focus-visible{outline:2px solid var(--shield); outline-offset:2px}
+.tab{display:flex; flex-direction:column; align-items:flex-start; padding:7px 12px; border:1px solid var(--line-hi);
+  font:600 11px/1.2 var(--f-display); letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2)}
+.tab small{font:400 9.5px/1.3 var(--f-data); letter-spacing:.04em; text-transform:none; color:var(--ink-3); margin-top:3px}
+.tab.on{border-color:var(--shield); color:var(--shield); background:rgba(63,240,255,.08)}
+
+/* ---------- plancia ---------- */
+.deck{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:10px; min-height:0}
+.mapcol{display:grid; grid-template-rows:minmax(0,1fr) auto; gap:10px; min-height:0; min-width:0}
+.map{min-height:380px; overflow:hidden; background:#03050c}
+.map canvas{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:manipulation}
+.mode-tag{position:absolute; top:10px; left:12px; z-index:2; pointer-events:none;
+  font:600 10px/1 var(--f-display); letter-spacing:.18em; text-transform:uppercase; color:var(--shield);
+  background:rgba(3,5,12,.7); padding:6px 8px; border:1px solid var(--line-hi)}
+.legend{position:absolute; left:12px; bottom:10px; right:12px; z-index:2; pointer-events:none;
+  display:flex; flex-wrap:wrap; gap:4px 14px; font-size:10.5px; color:var(--ink-2)}
+.legend span{background:rgba(3,5,12,.6); padding:1px 4px}
+.legend i{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px}
+.tip{position:absolute; z-index:4; pointer-events:none; width:230px; padding:8px 10px;
+  background:rgba(5,10,24,.95); border:1px solid var(--shield); box-shadow:0 0 18px rgba(63,240,255,.25); font-size:11.5px}
+.tip b{font:700 13px var(--f-display); letter-spacing:.06em}
+.tip .r{display:flex; justify-content:space-between; gap:10px}
+.alert-layer{position:absolute; inset:0; z-index:3; pointer-events:none;
+  box-shadow:inset 0 0 140px rgba(255,40,70,.55); animation:alertpulse 1.2s ease-in-out infinite}
+@keyframes alertpulse{50%{box-shadow:inset 0 0 60px rgba(255,40,70,.22)}}
+.alert-banner{position:absolute; top:44px; left:50%; transform:translateX(-50%); white-space:nowrap;
+  font:700 13px/1 var(--f-display); letter-spacing:.3em; color:#fff; padding:8px 14px;
+  background:repeating-linear-gradient(-45deg,rgba(255,77,106,.9) 0 10px,rgba(110,8,28,.9) 10px 20px)}
+.alert-banner span{letter-spacing:.08em; font-weight:400; margin-left:10px}
+
+.controls{display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; padding:10px 12px}
+.grp{display:flex; align-items:center; flex-wrap:wrap; gap:8px}
+.hint{margin-left:auto; font-size:11px; color:var(--ink-3)}
+.btn{font:600 11px/1 var(--f-display); letter-spacing:.14em; text-transform:uppercase; padding:10px 14px;
+  border:1px solid var(--line-hi); background:var(--panel-2); color:var(--ink);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.btn:focus-visible{outline:0; box-shadow:inset 0 0 0 2px var(--shield)}
+.btn.primary{border-color:var(--shield); color:#eaffff; text-shadow:0 0 8px rgba(63,240,255,.8);
+  background:linear-gradient(90deg,rgba(63,240,255,.24),rgba(63,240,255,.06))}
+.btn.danger{border-color:rgba(255,77,106,.65); color:#ffd0d8}
+.btn.danger.on{background:rgba(255,77,106,.28)}
+.btn:disabled{opacity:.5; cursor:wait}
+.seg{display:inline-flex; border:1px solid var(--line-hi)}
+.seg button{padding:9px 10px; font:600 11px/1 var(--f-display); color:var(--ink-2)}
+.seg button.on{background:rgba(63,240,255,.16); color:var(--shield)}
+
+/* ---------- colonna laterale ---------- */
+.side{min-height:0; min-width:0; overflow:auto; display:flex; flex-direction:column; gap:10px; padding-right:2px}
+.panel{padding:14px 14px 16px}
+.ph{margin:0 0 10px; display:flex; justify-content:space-between; align-items:center; gap:8px;
+  font:600 11px/1.2 var(--f-display); letter-spacing:.2em; text-transform:uppercase; color:var(--shield)}
+.ph button{font:500 10px var(--f-data); letter-spacing:.04em; text-transform:none; color:var(--ink-3); border-bottom:1px dashed var(--ink-3)}
+.holo{background-image:repeating-linear-gradient(0deg,rgba(63,240,255,.035) 0 1px,transparent 1px 3px)}
+.holo-in{animation:holo .45s ease-out}
+@keyframes holo{from{opacity:.35; transform:translateY(4px)}}
+.tkbig{font:700 30px/1 var(--f-display); letter-spacing:.04em; text-shadow:0 0 18px currentColor}
+.nm-big{color:var(--ink-2); margin-top:4px; font-size:12px}
+.chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+.chip{font-size:10px; padding:2px 7px; border:1px solid var(--line-hi); color:var(--ink-2)}
+.rows{margin:12px 0 0}
+.rows div{display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px dashed var(--line)}
+.rows dt{color:var(--ink-2)}
+.rows dd{margin:0; text-align:right; font-variant-numeric:tabular-nums}
+.decode{margin-top:12px; font-size:11.5px; color:var(--ink-2); border-left:2px solid var(--shield); padding-left:9px}
+.diag{list-style:none; margin:12px 0 0; padding:0; display:grid; gap:9px}
+.diag li{display:grid; grid-template-columns:44px minmax(0,1fr); gap:8px; font-size:12px; line-height:1.45}
+.sev{font:700 9px/1 var(--f-display); letter-spacing:.1em; padding:4px 0; text-align:center; border:1px solid; height:fit-content}
+.sev.info{color:var(--shield)} .sev.warn{color:var(--warn)} .sev.crit{color:var(--loss)} .sev.ok{color:var(--profit)}
+.sbars{display:grid; gap:9px; margin-top:12px}
+.sbar{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 10px; font-size:11.5px; width:100%; text-align:left}
+.sbar .track{grid-column:1/-1; height:6px; background:var(--line)}
+.sbar .fill{height:100%}
+.mgroup + .mgroup{margin-top:6px}
+.mhead{display:flex; width:100%; align-items:center; gap:8px; padding:6px 4px; text-align:left;
+  font:600 11px/1.2 var(--f-display); letter-spacing:.1em; text-transform:uppercase}
+.mhead span{font:400 10.5px var(--f-data); letter-spacing:0; text-transform:none; color:var(--ink-3)}
+.mhead b{margin-left:auto; font:500 11px var(--f-data)}
+.dot{width:9px; height:9px; border-radius:50%; flex:none}
+.mgroup ul{list-style:none; margin:0; padding:0}
+.mrow{display:grid; grid-template-columns:56px minmax(0,1fr) 50px 62px; gap:8px; width:100%; text-align:left;
+  padding:5px 4px; font-size:11.5px; border-bottom:1px solid rgba(26,39,71,.7)}
+.mrow:hover,.mrow.on{background:rgba(63,240,255,.08)}
+.mrow .tk{font-weight:700}
+.mrow .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-2)}
+.mrow .wt,.mrow .pn{text-align:right; font-variant-numeric:tabular-nums}
+.empty{font-size:11px; color:var(--ink-3); padding:2px 4px 6px 21px}
+.big{font:700 26px/1.1 var(--f-display); color:var(--shield); text-shadow:0 0 16px rgba(63,240,255,.45)}
+.fan{width:100%; height:auto; display:block; margin-top:10px}
+.fan .band{fill:rgba(63,240,255,.16)}
+.fan .med{fill:none; stroke:#3ff0ff; stroke-width:2}
+.fan .inv{fill:none; stroke:#ffb547; stroke-width:1.2; stroke-dasharray:4 3}
+.fan .grid{stroke:#1a2747; stroke-width:1}
+.fan text{fill:#62759e; font:10px var(--f-data)}
+.keyline{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:10.5px; color:var(--ink-2); margin-top:6px}
+.keyline i{display:inline-block; width:14px; height:0; border-top:2px solid; vertical-align:middle; margin-right:5px}
+.atable{width:100%; border-collapse:collapse; font-size:11px; margin-top:10px}
+.atable th,.atable td{padding:4px 0; text-align:right; border-bottom:1px dashed var(--line); font-variant-numeric:tabular-nums}
+.atable th:first-child,.atable td:first-child{text-align:left}
+.atable th{font:600 9.5px var(--f-display); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+.note{font-size:11px; color:var(--ink-2); margin:10px 0 0; line-height:1.55}
+.foot{font-size:10.5px; color:var(--ink-3); line-height:1.55; margin:0; padding:0 2px 6px}
+
+@media (max-width:900px){
+  html,body,#root,.app{height:auto}
+  .deck{grid-template-columns:minmax(0,1fr)}
+  .map{height:min(70vh,560px); min-height:420px}
+  .side{overflow:visible}
+  .top{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:14px 16px}
+  .brand,.tabs{grid-column:1/-1}
+  .tabs{margin-left:0}
+  .hint{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .alert-layer,.holo-in{animation:none}
+}
+</style>
+
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+"use strict";
+const {useState,useEffect,useRef,useMemo} = React;
+const html = htm.bind(React.createElement);
+
+/* ================= formattazione ================= */
+const _nf = {};
+const NF = d => _nf[d] || (_nf[d] = new Intl.NumberFormat("it-IT",{minimumFractionDigits:d,maximumFractionDigits:d}));
+const NBSP = " ";
+const eur  = (v,d=2) => (v<0?"−":"")+"€"+NBSP+NF(d).format(Math.abs(v));
+const eurS = (v,d=0) => (v>0?"+":v<0?"−":"")+"€"+NBSP+NF(d).format(Math.abs(v));
+const pct  = (x,d=1) => NF(d).format(x*100)+NBSP+"%";
+const pctS = (x,d=1) => (x>0.00005?"+":x<-0.00005?"−":"")+NF(d).format(Math.abs(x*100))+NBSP+"%";
+const qtyF = q => new Intl.NumberFormat("it-IT",{maximumFractionDigits:6}).format(q);
+const priceF = v => eur(v, v<1?4:2);
+const eurK = v => v>=1e6 ? "€"+NF(2).format(v/1e6)+" Mln" : v>=1e4 ? "€"+NF(0).format(v/1e3)+"k" : "€"+NF(1).format(v/1e3)+"k";
+const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+const rgbOf = h => { const n=parseInt(h.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; };
+const rgba = (h,a) => { const [r,g,b]=rgbOf(h); return `rgba(${r},${g},${b},${a})`; };
+const COL = {shield:"#3ff0ff", profit:"#4dffb0", loss:"#ff4d6a", warn:"#ffb547", nd:"#7f8cab", flat:"#9fb2d9", ink:"#dbe6ff", ink2:"#93a6cf", ink3:"#62759e"};
+
+/* ================= regole del gioco ================= */
+// Ipotesi per la proiezione (annue, nominali, illustrative) e shock dello stress test.
+const SUBS = {
+  stock: {sys:"equity", label:"Azione singola", mu:.07,  sigma:.30, beta:.75,  shock:-.45},
+  etf:   {sys:"etf",    label:"ETF azionario",  mu:.065, sigma:.16, beta:.95,  shock:-.33},
+  crypto:{sys:"crypto", label:"Crypto",         mu:.08,  sigma:.70, beta:.45,  shock:-.65},
+  bond:  {sys:"safe",   label:"Obbligazioni",   mu:.028, sigma:.06, beta:.05,  shock:.02},
+  cash:  {sys:"safe",   label:"Liquidità",      mu:.02,  sigma:.005,beta:0,    shock:0},
+  gold:  {sys:"safe",   label:"Oro",            mu:.03,  sigma:.15, beta:-.05, shock:.05}
+};
+const SYSTEMS = {
+  equity:{label:"Azioni",                game:"Pianeta industriale", kind:"planet",  color:"#ff9f5a"},
+  etf:   {label:"ETF",                   game:"Mondo-colonia",       kind:"colony",  color:"#5ec8ff"},
+  crypto:{label:"Crypto",                game:"Nebulosa instabile",  kind:"nebula",  color:"#d26bff"},
+  safe:  {label:"Bond, liquidità, oro",  game:"Stazione mineraria",  kind:"station", color:"#ffd27a"}
+};
+const SYS_ORDER = ["equity","etf","crypto","safe"];
+const SHIP_CLASSES = [
+  {min:0,name:"Corvetta"},{min:10000,name:"Fregata"},{min:25000,name:"Incrociatore"},
+  {min:50000,name:"Corazzata"},{min:100000,name:"Ammiraglia"},{min:250000,name:"Dreadnought"}
+];
+const shipClass = v => { let i=0; SHIP_CLASSES.forEach((c,k)=>{ if(v>=c.min) i=k; }); return {level:i, name:SHIP_CLASSES[i].name, next:SHIP_CLASSES[i+1]?.min ?? null}; };
+const escortsOf = v => clamp(Math.round(v/4000),1,36);
+const shieldOf = g => Math.round(clamp(50 + g*200, 3, 100));
+const meteorRate = sig => Math.min(.9, -sig*1.3);   // al secondo
+const cargoRate  = sig => Math.min(1.1, sig*1.8);   // al secondo
+
+/* ================= dati ================= */
+// Flotta reale: API Scalable Capital (get_portfolio_holdings / overview / savings plans), 2 novembre 2026.
+// v = valutazione API in EUR, price = quotazione mid, avg = prezzo di carico FIFO.
+const DATASETS = {
+  real:{
+    id:"real", tab:"Flotta reale", badge:"Scalable · 02·11·2026, 10:51 UTC",
+    tag:"Dati reali · Scalable Capital",
+    source:"API Scalable Capital tramite connettore: valutazione delle 10:51 UTC del 2 novembre 2026, inventario delle 01:06 UTC. Il controvalore è la somma delle 22 posizioni; il totale dell'API è €40.102,26. PnL per posizione calcolato sul prezzo di carico FIFO; esclude le plusvalenze già realizzate. Liquidità €0, nessuna crypto.",
+    pac:500, pacNote:"PAC €500/mese su Amundi Core MSCI World (IE000BI8OT95), prima esecuzione 16 nov 2026: lo strumento non è ancora in portafoglio.",
+    maxReturn:6055.82,
+    positions:[
+      {t:"ACWI",  name:"Scalable MSCI AC World Xtrackers (Acc)",          isin:"LU2903252349", sub:"etf",   qty:2582.259899, price:12.133,   avg:10.270577, v:31330.56},
+      {t:"XMME",  name:"Xtrackers MSCI Emerging Markets (Acc)",           isin:"IE00BTJRMP35", sub:"etf",   qty:24.438308,   price:77.182,   avg:66.642912, v:1886.20},
+      {t:"VUAA",  name:"Vanguard S&P 500 (Acc)",                          isin:"IE00BFMXXD54", sub:"etf",   qty:14,          price:131.665,  avg:94.776429, v:1843.31},
+      {t:"IWMO",  name:"iShares Edge MSCI World Momentum Factor (Acc)",   isin:"IE00BP3QZ825", sub:"etf",   qty:13,          price:97.4,     avg:100.832308,v:1266.20},
+      {t:"AEEM",  name:"Amundi MSCI Emerging Markets Swap EUR (Acc)",     isin:"LU1681045370", sub:"etf",   qty:93,          price:7.3556,   avg:5.341828,  v:684.07},
+      {t:"CSPX",  name:"iShares Core S&P 500 (Acc)",                      isin:"IE00B5BMR087", sub:"etf",   qty:0.64537,     price:734.28,   avg:579.791437,v:473.88},
+      {t:"EIMI",  name:"iShares Core MSCI Emerging Markets IMI (Acc)",    isin:"IE00BKM4GZ66", sub:"etf",   qty:8.304,       price:45.352,   avg:39.536368, v:376.60},
+      {t:"RACE",  name:"Ferrari",                                         isin:"NL0011585146", sub:"stock", qty:1.016206,    price:354.075,  avg:387.283681,v:359.81},
+      {t:"XAIX",  name:"Xtrackers Artificial Intelligence & Big Data (Acc)", isin:"IE00BGV5VN51", sub:"etf", qty:1.443179,  price:206.45,   avg:120.934409,v:297.94},
+      {t:"MU",    name:"Micron Technology",                               isin:"US5951121038", sub:"stock", qty:0.35089,     price:808,      avg:997.691584,v:283.52},
+      {t:"SGLN",  name:"iShares Physical Gold ETC",                       isin:"IE00B4ND3602", sub:"gold",  qty:4,           price:67.4825,  avg:68.81,     v:269.93},
+      {t:"PYPL",  name:"PayPal Holdings",                                 isin:"US70450Y1038", sub:"stock", qty:3.022873,    price:51.01,    avg:49.125451, v:154.20},
+      {t:"RBOT",  name:"iShares Automation & Robotics (Acc)",             isin:"IE00BYZK4552", sub:"etf",   qty:8.325875,    price:18.477,   avg:12.007146, v:153.84},
+      {t:"SPACEX",name:"SpaceX",                                          isin:"US84615Q1031", sub:"stock", qty:1,           price:123.62,   avg:130.66,    v:123.62},
+      {t:"BTEC",  name:"iShares Nasdaq US Biotechnology (Acc)",           isin:"IE00BYXG2H39", sub:"etf",   qty:12.075295,   price:9.566,    avg:6.211028,  v:115.51},
+      {t:"NDIA",  name:"iShares MSCI India (Acc)",                        isin:"IE00BZCQB185", sub:"etf",   qty:14.981496,   price:7.581,    avg:8.676036,  v:113.57},
+      {t:"AGED",  name:"iShares Ageing Population (Acc)",                 isin:"IE00BYZK4669", sub:"etf",   qty:11.77,       price:9.4545,   avg:7.220051,  v:111.28},
+      {t:"BC",    name:"Brunello Cucinelli",                              isin:"IT0004764699", sub:"stock", qty:1.009313,    price:88.38,    avg:82.51157,  v:89.20},
+      {t:"IWDA",  name:"iShares Core MSCI World (Acc)",                   isin:"IE00B4L5Y983", sub:"etf",   qty:0.539,       price:129.5975, avg:101.87384, v:69.85},
+      {t:"IUSE",  name:"iShares S&P 500 EUR Hedged (Acc)",                isin:"IE00B3ZW0K18", sub:"etf",   qty:0.308,       price:156.215,  avg:113.116883,v:48.11},
+      {t:"FRNT",  name:"Xtrackers S&P Select Frontier Swap (Acc)",        isin:"LU0328476410", sub:"etf",   qty:0.989,       price:25.5075,  avg:20.202224, v:25.23},
+      {t:"MYS",   name:"Xtrackers MSCI Malaysia (Acc)",                   isin:"LU0514694370", sub:"etf",   qty:1.834,       price:12.495,   avg:10.899673, v:22.92}
+    ]
+  },
+  sim:{
+    id:"sim", tab:"Flotta simulata", badge:"Dati inventati · con crypto e bond",
+    tag:"Dati simulati · demo",
+    source:"Portafoglio di esempio inventato per mostrare tutte le meccaniche (crypto, bond, liquidità, forti perdite). Prezzi e quantità non sono reali. Valori in EUR.",
+    pac:500, pacNote:"PAC ipotetico di €500/mese.",
+    positions:[
+      {t:"AAPL", name:"Apple",                               sub:"stock",  qty:12,    price:218.40, avg:184.50},
+      {t:"NVDA", name:"NVIDIA",                              sub:"stock",  qty:20,    price:162.30, avg:112.80},
+      {t:"TSLA", name:"Tesla",                               sub:"stock",  qty:9,     price:196.50, avg:262.00},
+      {t:"VWCE", name:"Vanguard FTSE All-World (Acc)",       sub:"etf",    qty:70,    price:132.10, avg:114.20},
+      {t:"CSPX", name:"iShares Core S&P 500 (Acc)",          sub:"etf",    qty:6,     price:598.00, avg:541.00},
+      {t:"BTC",  name:"Bitcoin",                             sub:"crypto", qty:0.045, price:88500,  avg:62000},
+      {t:"ETH",  name:"Ethereum",                            sub:"crypto", qty:1.2,   price:2620,   avg:3280},
+      {t:"SOL",  name:"Solana",                              sub:"crypto", qty:14,    price:118,    avg:192},
+      {t:"XGLE", name:"Xtrackers Eurozone Government Bond",  sub:"bond",   qty:18,    price:228.40, avg:224.90},
+      {t:"EUR",  name:"Liquidità in conto",                  sub:"cash",   qty:1850,  price:1,      avg:1}
+    ]
+  }
+};
+
+function derive(ds, stress){
+  const pos = ds.positions.map(p=>{
+    const sub = SUBS[p.sub];
+    const k = stress ? 1+sub.shock : 1;
+    const value = (p.v ?? p.price*p.qty) * k;
+    const cost = p.avg!=null ? p.avg*p.qty : null;
+    const pnl = cost!=null ? value-cost : null;
+    const pnlPct = cost ? pnl/cost : null;
+    return {...p, id:p.t, sys:sub.sys, price:p.price*k, basePrice:p.price, value, cost, pnl, pnlPct, signal:pnlPct};
+  });
+  const total = pos.reduce((s,p)=>s+p.value,0);
+  const baseTotal = ds.positions.reduce((s,p)=>s+(p.v ?? p.price*p.qty),0);
+  pos.forEach(p=>{ p.weight = p.value/total; });
+  const invested = pos.reduce((s,p)=>s+(p.cost??0),0);
+  const totalPnl = total - invested;
+  const systems = SYS_ORDER.map(id=>{
+    const ps = pos.filter(p=>p.sys===id).sort((a,b)=>b.value-a.value);
+    const value = ps.reduce((s,p)=>s+p.value,0);
+    const cost = ps.reduce((s,p)=>s+(p.cost??0),0);
+    return {id, positions:ps, value, weight:value/total, pnl: ps.length? value-cost : null, pnlPct: cost? (value-cost)/cost : null, ghost: ps.length===0};
+  });
+  return {pos, total, baseTotal, invested, totalPnl, totalPnlPct: totalPnl/invested, systems, drawdown: total/baseTotal-1};
+}
+
+/* ================= proiezione Monte Carlo ================= */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function project(d, years, pac){
+  const w = {}; d.pos.forEach(p=>{ w[p.sub]=(w[p.sub]||0)+p.weight; });
+  const subs = Object.keys(w).map(k=>{ const s=SUBS[k]; return {w:w[k], drift:(s.mu - s.sigma*s.sigma/2)/12, vol:s.sigma/Math.sqrt(12), b:s.beta, c:Math.sqrt(1-s.beta*s.beta)}; });
+  const rnd = mulberry32(20261102);
+  const gauss = () => { let u=0; while(!u) u=rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*rnd()); };
+  const N = 2000, M = years*12;
+  const vals = new Float64Array(N).fill(d.total);
+  const series = [{m:0,p10:d.total,p50:d.total,p90:d.total}];
+  const tmp = new Float64Array(N);
+  for(let m=1;m<=M;m++){
+    for(let i=0;i<N;i++){
+      const zc = gauss(); let R = 0;
+      for(const s of subs) R += s.w*(Math.exp(s.drift + s.vol*(s.b*zc + s.c*gauss())) - 1);
+      vals[i] = vals[i]*(1+R) + pac;
+    }
+    tmp.set(vals); tmp.sort();
+    series.push({m, p10:tmp[Math.floor(N*.1)], p50:tmp[Math.floor(N*.5)], p90:tmp[Math.floor(N*.9)]});
+  }
+  const contributed = d.total + pac*M;
+  let below = 0; for(let i=0;i<N;i++) if(vals[i]<contributed) below++;
+  const end = series[series.length-1];
+  return {years, pac, series, p10:end.p10, p50:end.p50, p90:end.p90, contributed, start:d.total, probBelow:below/N, subs:Object.keys(w)};
+}
+
+/* ================= motore canvas ================= */
+function createEngine(canvas, cb){
+  const ctx = canvas.getContext("2d");
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const E = {W:1,H:1,u:1,t:0,view:null,dsKey:null,sel:null,hover:null,
+    systems:[],sats:[],satMap:new Map(),meteors:[],cargos:[],parts:[],rings:[],beams:[],
+    warpAt:-99,lastKill:-99,combo:0,hits:0,statT:0,ms:{x:0,y:0,size:20,R:40},run:true};
+  const stars = Array.from({length:260},()=>({x:Math.random(),y:Math.random(),z:Math.random()*.8+.2,tw:Math.random()*6.28}));
+  const clouds = [[.16,.22,.45,"#24409a"],[.84,.74,.5,"#5a2a8a"],[.62,.12,.3,"#1d6a8a"],[.28,.88,.35,"#3a2a6a"]];
+
+  function resize(){
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    E.W = Math.max(1,r.width); E.H = Math.max(1,r.height);
+    canvas.width = Math.round(E.W*dpr); canvas.height = Math.round(E.H*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    E.u = clamp(Math.min(E.W,E.H)/720, .5, 1.3);
+    layout();
+  }
+
+  function layout(){
+    if(!E.view) return;
+    const {W,H,u} = E, d = E.view.d;
+    const cx = W/2, cy = H/2, n = d.systems.length;
+    const wmax = Math.max(...d.pos.map(p=>p.weight));
+    const start = -Math.PI/2 - Math.PI/n;
+    const prev = E.satMap;
+    E.systems = []; E.sats = []; E.satMap = new Map();
+    d.systems.forEach((s,i)=>{
+      const a = start + i*2*Math.PI/n;
+      const sys = {id:s.id, def:SYSTEMS[s.id], data:s, ghost:s.ghost, r: s.ghost ? 18*u : u*(22+30*Math.sqrt(s.weight)), seed:i*1.7+.3};
+      let R = sys.r + 6*u, k = 0, ring = 0;
+      const list = s.positions;
+      while(k<list.length){
+        const cap = 6 + ring*5, chunk = list.slice(k,k+cap);
+        const rads = chunk.map(p=>Math.max(2.6, 24*u*Math.sqrt(p.weight/wmax)));
+        const mr = Math.max(...rads);
+        R += mr + 5*u;
+        chunk.forEach((p,j)=>{
+          const old = prev.get(p.id);
+          const sat = {id:p.id, p, sys, r:rads[j], orbit:R, ring,
+            phase: old ? old.phase : (j/chunk.length)*Math.PI*2 + ring*.6 + i,
+            omega: (.26/(1+ring*.7))*(ring%2?-1:1)*(reduce?.25:1), hit: old?old.hit:0, x:0, y:0};
+          E.sats.push(sat); E.satMap.set(p.id, sat);
+        });
+        R += mr + 2*u; k += cap; ring++;
+      }
+      sys.ext = R;
+      const padX = sys.ext + 8, padTop = sys.ext*.9 + 8, padBot = sys.ext*.9 + 38*u + 4;
+      sys.x = clamp(cx + Math.cos(a)*W*.31, padX, W-padX);
+      sys.y = clamp(cy + Math.sin(a)*H*.29, padTop, H-padBot);
+      E.systems.push(sys);
+    });
+    E.ms.x = cx; E.ms.y = cy;
+  }
+
+  function setView(v){
+    if(v.dsKey!==E.dsKey){ E.meteors=[]; E.cargos=[]; E.parts=[]; E.rings=[]; E.dsKey=v.dsKey; E.satMap=new Map(); }
+    if(E.view && v.mode!==E.view.mode){ E.meteors=[]; E.cargos=[]; }
+    E.view = v; layout();
+  }
+
+  /* ---------- spawn ---------- */
+  function spawnMeteor(s){
+    const a = Math.random()*Math.PI*2, cx=E.W/2, cy=E.H/2, dx=Math.cos(a), dy=Math.sin(a);
+    const kx = dx>0 ? (E.W+20-cx)/dx : dx<0 ? (-20-cx)/dx : Infinity;
+    const ky = dy>0 ? (E.H+20-cy)/dy : dy<0 ? (-20-cy)/dy : Infinity;
+    const k = Math.min(kx,ky);
+    const pirate = s.p.sub==="crypto";
+    E.meteors.push({x:cx+dx*k, y:cy+dy*k, target:s.id, pirate,
+      r:E.u*(pirate?6.5:4.5+Math.random()*4), speed:E.u*((reduce?40:58)+Math.random()*30),
+      rot:Math.random()*6, spin:(Math.random()-.5)*3, wob:Math.random()*6, vx:0, vy:0,
+      shape:Array.from({length:8},()=>.7+Math.random()*.45)});
+  }
+  function spawnCargo(s){ E.cargos.push({from:s.id, t:0, dur:clamp(3.4/(.6+s.p.signal*2.2),1.3,5), bend:(Math.random()-.5)*.7}); }
+  function burst(x,y,n,colors,speed,life){
+    for(let i=0;i<n;i++){ const a=Math.random()*6.283, v=speed*(.3+Math.random()*.7)*E.u;
+      E.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:life*(.6+Math.random()*.4),max:life,c:colors[i%colors.length],sz:(1+Math.random()*2)*E.u}); }
+  }
+  function kill(idx){
+    const m = E.meteors[idx]; E.meteors.splice(idx,1);
+    E.combo = (E.t-E.lastKill<1.6) ? Math.min(5,E.combo+1) : 1; E.lastKill = E.t;
+    const pts = 10*E.combo;
+    burst(m.x,m.y,22,["#ffb547","#fff2c4","#ff4d6a"],150,.7);
+    E.rings.push({x:m.x,y:m.y,r0:m.r,r1:m.r*5,life:.45,max:.45,c:"#ffb547"});
+    E.beams.push({x:m.x,y:m.y,life:.18});
+    E.parts.push({x:m.x,y:m.y-8,vx:0,vy:-34,life:.9,max:.9,c:COL.profit,text:"+"+pts+(E.combo>1?"  ×"+E.combo:"")});
+    cb.onKill(pts);
+  }
+
+  /* ---------- update ---------- */
+  function update(dt){
+    const v = E.view; if(!v) return;
+    const warping = E.t-E.warpAt < 1.8;
+    E.sats.forEach(s=>{
+      s.phase += s.omega*dt;
+      s.x = s.sys.x + Math.cos(s.phase)*s.orbit;
+      s.y = s.sys.y + Math.sin(s.phase)*s.orbit*.88;
+      s.hit = Math.max(0, s.hit-dt*2);
+      const sig = s.p.signal;
+      if(sig==null || warping || v.mode==="proj") return;
+      if(sig < -0.005 && E.meteors.length<30 && Math.random() < meteorRate(sig)*dt) spawnMeteor(s);
+      if(sig >  0.005 && E.cargos.length<40 && Math.random() < cargoRate(sig)*dt) spawnCargo(s);
+    });
+    E.ms.size = E.u*(14+v.level*3.6); E.ms.R = E.ms.size*2.3;
+    for(let i=E.meteors.length-1;i>=0;i--){
+      const m = E.meteors[i], s = E.satMap.get(m.target);
+      if(!s){ E.meteors.splice(i,1); continue; }
+      const dx=s.x-m.x, dy=s.y-m.y, dist=Math.hypot(dx,dy)||1;
+      if(dist < s.r + m.r*.6){
+        s.hit = 1; E.hits++; burst(s.x,s.y,12,["#ffb547","#ff4d6a","#fff2c4"],90,.5);
+        E.meteors.splice(i,1); continue;
+      }
+      const w = Math.sin(E.t*3+m.wob)*.25, ux=dx/dist, uy=dy/dist;
+      m.vx = (ux - uy*w)*m.speed; m.vy = (uy + ux*w)*m.speed;
+      m.x += m.vx*dt; m.y += m.vy*dt; m.rot += m.spin*dt;
+    }
+    for(let i=E.cargos.length-1;i>=0;i--){
+      const c = E.cargos[i]; c.t += dt/c.dur;
+      if(!E.satMap.has(c.from)){ E.cargos.splice(i,1); continue; }
+      if(c.t>=1){ E.rings.push({x:E.ms.x,y:E.ms.y,r0:E.ms.R,r1:E.ms.R+9*E.u,life:.4,max:.4,c:COL.profit}); E.cargos.splice(i,1); }
+    }
+    for(let i=E.parts.length-1;i>=0;i--){ const p=E.parts[i]; p.life-=dt; if(p.life<=0){E.parts.splice(i,1);continue;} p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.text){p.vx*=.96; p.vy*=.96;} }
+    for(let i=E.rings.length-1;i>=0;i--){ E.rings[i].life-=dt; if(E.rings[i].life<=0) E.rings.splice(i,1); }
+    for(let i=E.beams.length-1;i>=0;i--){ E.beams[i].life-=dt; if(E.beams[i].life<=0) E.beams.splice(i,1); }
+    E.statT += dt; if(E.statT>.5){ E.statT=0; cb.onStats({threats:E.meteors.length, hits:E.hits}); }
+  }
+
+  /* ---------- draw helpers ---------- */
+  function circle(x,y,r){ ctx.beginPath(); ctx.arc(x,y,Math.max(.1,r),0,Math.PI*2); }
+  function glow(x,y,r,c,a){ const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,rgba(c,a)); g.addColorStop(1,rgba(c,0)); ctx.fillStyle=g; circle(x,y,r); ctx.fill(); }
+  function statusColor(sig){ return sig==null ? COL.nd : Math.abs(sig)<.005 ? COL.flat : sig>0 ? COL.profit : COL.loss; }
+
+  function drawBackground(){
+    const {W,H,t} = E;
+    ctx.fillStyle = "#03050c"; ctx.fillRect(0,0,W,H);
+    clouds.forEach(([x,y,r,c])=>{ glow(x*W,y*H,r*Math.max(W,H),c,.13); });
+    const wp = (t-E.warpAt)/1.8, warp = wp>=0 && wp<=1 ? Math.sin(Math.PI*wp) : 0;
+    const cx=W/2, cy=H/2;
+    stars.forEach(s=>{
+      if(!reduce) { s.x -= s.z*.004*(1/60); if(s.x<0) s.x+=1; }
+      const x=s.x*W, y=s.y*H;
+      const a = .25 + .6*s.z*(.65+.35*Math.sin(s.tw + t*2*s.z));
+      if(warp>0 && !reduce){
+        const dx=x-cx, dy=y-cy, d=Math.hypot(dx,dy)||1, len=warp*s.z*180*E.u;
+        ctx.strokeStyle = `rgba(190,245,255,${Math.min(1,a+warp*.4)})`; ctx.lineWidth = s.z*1.6;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+dx/d*len, y+dy/d*len); ctx.stroke();
+      } else {
+        ctx.fillStyle = `rgba(220,232,255,${a})`; const sz = s.z>.85?1.8:1.1; ctx.fillRect(x,y,sz,sz);
+      }
+    });
+    // radar
+    const R0 = 120*E.u;
+    ctx.strokeStyle = rgba(COL.shield,.055); ctx.lineWidth=1;
+    for(let k=1;k<=4;k++){ circle(cx,cy,R0*k); ctx.stroke(); }
+    if(!reduce){
+      const a = t*.5;
+      ctx.fillStyle = rgba(COL.shield,.035);
+      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R0*4,a-.5,a); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = rgba(COL.shield,.14); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(a)*R0*4, cy+Math.sin(a)*R0*4); ctx.stroke();
+    }
+    return warp;
+  }
+
+  function drawSystem(sys){
+    const {x,y,r,def} = sys, t = E.t, u = E.u, col = def.color;
+    // rotte commerciali verso la nave madre
+    ctx.setLineDash([3*u,7*u]); ctx.strokeStyle = rgba(col, sys.ghost?.08:.16); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(E.ms.x,E.ms.y); ctx.lineTo(x,y); ctx.stroke(); ctx.setLineDash([]);
+    if(sys.ghost){
+      ctx.setLineDash([4*u,5*u]); ctx.strokeStyle = rgba(col,.35); circle(x,y,r); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = rgba(col,.04); circle(x,y,r); ctx.fill();
+    } else if(def.kind==="planet"){
+      glow(x,y,r*1.9,col,.2);
+      const g = ctx.createRadialGradient(x-r*.4,y-r*.45,r*.1,x,y,r);
+      g.addColorStop(0,"#ffd9b8"); g.addColorStop(.45,col); g.addColorStop(1,"#3b1a08");
+      ctx.fillStyle=g; circle(x,y,r); ctx.fill();
+      ctx.save(); circle(x,y,r); ctx.clip();
+      ctx.fillStyle="rgba(40,14,0,.22)";
+      for(let k=0;k<4;k++){ ctx.beginPath(); ctx.ellipse(x+Math.sin(t*.2+k)*r*.2, y-r*.6+k*r*.42, r*1.3, r*.09, 0, 0, Math.PI*2); ctx.fill(); }
+      ctx.fillStyle="rgba(0,0,0,.35)"; ctx.beginPath(); ctx.arc(x+r*.55,y+r*.35,r*1.05,0,Math.PI*2); ctx.fill();
+      for(let k=0;k<14;k++){ const a=sys.seed*7+k*2.1, rr=r*(.35+.55*((k*37)%10)/10);
+        const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr;
+        if(px-x+py-y > r*.15){ ctx.fillStyle=`rgba(255,220,140,${.5+.5*Math.sin(t*3+k)})`; ctx.fillRect(px,py,1.6*u,1.6*u); } }
+      ctx.restore();
+      ctx.strokeStyle=rgba(col,.55); ctx.lineWidth=1.4*u;
+      ctx.beginPath(); ctx.ellipse(x,y,r*1.65,r*.34,-.32,0,Math.PI*2); ctx.stroke();
+    } else if(def.kind==="colony"){
+      glow(x,y,r*1.9,col,.2);
+      const g = ctx.createRadialGradient(x-r*.4,y-r*.45,r*.1,x,y,r);
+      g.addColorStop(0,"#d8f4ff"); g.addColorStop(.5,col); g.addColorStop(1,"#062a4a");
+      ctx.fillStyle=g; circle(x,y,r); ctx.fill();
+      ctx.save(); circle(x,y,r); ctx.clip();
+      for(let k=0;k<6;k++){ ctx.fillStyle = k%2 ? "rgba(255,255,255,.08)" : "rgba(0,30,70,.18)";
+        ctx.fillRect(x-r, y-r+k*r/3 + Math.sin(t*.4+k)*2*u, r*2, r*.18); }
+      ctx.fillStyle="rgba(0,8,25,.35)"; ctx.beginPath(); ctx.arc(x+r*.55,y+r*.35,r*1.05,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle=rgba(col,.6); ctx.lineWidth=2*u; circle(x,y,r+2*u); ctx.stroke();
+    } else if(def.kind==="nebula"){
+      ctx.save(); ctx.globalCompositeOperation="lighter";
+      const hues=["#d26bff","#ff5fd1","#6b8bff","#b44dff","#ff8af0","#8a6bff"];
+      for(let k=0;k<6;k++){
+        const a = sys.seed + k*1.3 + t*.15*(k%2?1:-1);
+        const off = r*.55*(.6+.4*Math.sin(t*.7+k)), br = r*(.75+.3*Math.sin(t*1.3+k*2));
+        glow(x+Math.cos(a)*off, y+Math.sin(a)*off, br, hues[k], .33*(.7+.3*Math.sin(t*3+k)));
+      }
+      glow(x,y,r*.35,"#ffffff",.6);
+      ctx.restore();
+      if(Math.sin(t*4.7+sys.seed*3)>.96){
+        ctx.strokeStyle="rgba(255,220,255,.8)"; ctx.lineWidth=1.2*u; ctx.beginPath();
+        let px=x, py=y; ctx.moveTo(px,py);
+        for(let k=0;k<5;k++){ px += (Math.random()-.5)*r*.8; py += (Math.random()-.5)*r*.8; ctx.lineTo(px,py); }
+        ctx.stroke();
+      }
+    } else {
+      glow(x,y,r*1.8,col,.16);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(t*.15);
+      ctx.strokeStyle=rgba(col,.85); ctx.lineWidth=3*u; ctx.setLineDash([r*.5,r*.18]);
+      circle(0,0,r*.95); ctx.stroke(); ctx.setLineDash([]);
+      ctx.lineWidth=1.4*u; ctx.strokeStyle=rgba(col,.6);
+      for(let k=0;k<4;k++){ const a=k*Math.PI/2; ctx.beginPath(); ctx.moveTo(Math.cos(a)*r*.45,Math.sin(a)*r*.45); ctx.lineTo(Math.cos(a)*r*.9,Math.sin(a)*r*.9); ctx.stroke(); }
+      for(let k=0;k<8;k++){ const a=k*Math.PI/4+.39; ctx.fillStyle = Math.sin(t*2+k)>0 ? col : rgba(col,.25); ctx.fillRect(Math.cos(a)*r*.95-1.5*u, Math.sin(a)*r*.95-1.5*u, 3*u, 3*u); }
+      ctx.restore();
+      ctx.beginPath(); for(let k=0;k<6;k++){ const a=k*Math.PI/3+t*.05; ctx.lineTo(x+Math.cos(a)*r*.45, y+Math.sin(a)*r*.45); } ctx.closePath();
+      ctx.fillStyle="#1d2333"; ctx.fill(); ctx.strokeStyle=col; ctx.lineWidth=1.5*u; ctx.stroke();
+      glow(x,y,r*.22,col,.8);
+    }
+    // orbite
+    if(!sys.ghost){
+      const seen = new Set();
+      E.sats.forEach(s=>{ if(s.sys===sys && !seen.has(s.ring)){ seen.add(s.ring);
+        ctx.strokeStyle=rgba(col,.08); ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(x,y,s.orbit,s.orbit*.88,0,0,Math.PI*2); ctx.stroke(); } });
+    }
+    // etichetta
+    const ly = y + sys.ext*.88 + 16*u;
+    ctx.textAlign="center"; ctx.textBaseline="alphabetic";
+    ctx.font = `600 ${Math.round(11*Math.max(u,.8))}px Oxanium, sans-serif`;
+    ctx.fillStyle = sys.ghost ? rgba(col,.55) : col;
+    ctx.fillText(`${def.label.toUpperCase()} · ${pct(sys.data.weight,1)}`, x, ly);
+    ctx.font = `400 ${Math.round(10*Math.max(u,.8))}px "JetBrains Mono", monospace`;
+    const pn = sys.data.pnlPct;
+    ctx.fillStyle = sys.ghost ? COL.ink3 : pn==null ? COL.ink3 : pn>=0 ? COL.profit : COL.loss;
+    ctx.fillText(sys.ghost ? `${def.game} · settore vuoto` : `${def.game}${pn!=null?" · "+pctS(pn):""}`, x, ly+13*Math.max(u,.8));
+  }
+
+  function drawSat(s, focus){
+    const u=E.u, sig=s.p.signal, sc=statusColor(sig), col=s.sys.def.color;
+    const sh = s.hit*3*u, x = s.x+(Math.random()-.5)*sh, y = s.y+(Math.random()-.5)*sh;
+    const g = ctx.createRadialGradient(x-s.r*.35,y-s.r*.35,s.r*.1,x,y,s.r);
+    g.addColorStop(0,"#ffffff"); g.addColorStop(.35,col); g.addColorStop(1,rgba(col,.35));
+    ctx.save();
+    ctx.shadowColor = sc; ctx.shadowBlur = sig==null ? 4 : clamp(6+Math.abs(sig)*40,6,26);
+    ctx.fillStyle = g; circle(x,y,s.r); ctx.fill();
+    ctx.restore();
+    let a = .9; if(sig!=null && sig<-.15) a = .55+.45*Math.sin(E.t*9+s.phase*5);
+    ctx.strokeStyle = rgba(sc,a); ctx.lineWidth = Math.max(1.2, s.r*.18); circle(x,y,s.r+1.6*u); ctx.stroke();
+    if(s.hit>0){ glow(x,y,s.r*2.6,"#ff7a3a",.55*s.hit); }
+    if(focus || s.r >= 7*u){
+      ctx.font = `600 ${Math.round(10*Math.max(u,.85))}px Oxanium, sans-serif`;
+      ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.fillStyle = focus ? COL.ink : COL.ink2;
+      ctx.fillText(s.p.t, x+s.r+5*u, y);
+    }
+  }
+
+  function drawMothership(){
+    const v=E.view, u=E.u, t=E.t, {x,y,size,R} = E.ms, e=v.shield/100;
+    const bob = reduce?0:Math.sin(t*1.2)*2*u;
+    let sc = e>.6 ? COL.shield : e>.3 ? COL.warn : COL.loss;
+    let flick = v.redAlert ? (.55+.45*Math.sin(t*14)) : 1;
+    // scudo
+    const g = ctx.createRadialGradient(x,y+bob,R*.6,x,y+bob,R);
+    g.addColorStop(0,rgba(sc,0)); g.addColorStop(1,rgba(sc,.16*e*flick));
+    ctx.fillStyle=g; circle(x,y+bob,R); ctx.fill();
+    ctx.strokeStyle=rgba(sc,(.2+.55*e)*flick); ctx.lineWidth=1+2*e; circle(x,y+bob,R); ctx.stroke();
+    ctx.lineWidth=2*u; ctx.strokeStyle=rgba(sc,.45*e*flick);
+    for(let k=0;k<6;k++){ const a=t*.5+k*1.047; ctx.beginPath(); ctx.arc(x,y+bob,R+3*u,a,a+.35); ctx.stroke(); }
+    // scorta
+    const n=v.escorts;
+    for(let i=0;i<n;i++){
+      const ring = i<14?0:1, cnt = ring===0 ? Math.min(n,14) : n-14, idx = ring===0 ? i : i-14;
+      const dir = ring===0?1:-1, a = idx/cnt*Math.PI*2 + t*(ring===0?.22:.16)*dir*(reduce?.3:1);
+      const rr = R + 16*u + ring*14*u, ex = x+Math.cos(a)*rr, ey = y+Math.sin(a)*rr*.88;
+      ctx.save(); ctx.translate(ex,ey); ctx.rotate(a+Math.PI/2*dir);
+      const es = (3.2+v.level*.35)*u;
+      ctx.fillStyle="#9fdfff"; ctx.beginPath(); ctx.moveTo(es*1.6,0); ctx.lineTo(-es,-es*.8); ctx.lineTo(-es*.5,0); ctx.lineTo(-es,es*.8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=rgba(COL.shield,.8); ctx.fillRect(-es*1.5,-.6,es*.6,1.2);
+      ctx.restore();
+    }
+    // scafo
+    ctx.save(); ctx.translate(x,y+bob); ctx.scale(size,size);
+    const lw = 1.3/size;
+    if(v.level>=2){ ctx.fillStyle="#141d36"; ctx.strokeStyle=rgba(sc,.7); ctx.lineWidth=lw;
+      [-1,1].forEach(sg=>{ ctx.beginPath(); ctx.moveTo(.2,.5*sg); ctx.lineTo(-.6,.95*sg); ctx.lineTo(-1.1,.95*sg); ctx.lineTo(-.9,.45*sg); ctx.closePath(); ctx.fill(); ctx.stroke(); }); }
+    if(v.level>=4){ ctx.fillStyle="#18223f"; [-1,1].forEach(sg=>{ ctx.fillRect(-1.0,.95*sg-(sg>0?0:.18),1.1,.18); }); }
+    const hg = ctx.createLinearGradient(0,-.6,0,.6); hg.addColorStop(0,"#2a3a66"); hg.addColorStop(1,"#0c1428");
+    ctx.fillStyle=hg; ctx.strokeStyle=rgba(sc,.95); ctx.lineWidth=lw;
+    ctx.beginPath(); ctx.moveTo(1.6,0); ctx.lineTo(.4,-.45); ctx.lineTo(-.9,-.55); ctx.lineTo(-1.2,-.25); ctx.lineTo(-1.2,.25); ctx.lineTo(-.9,.55); ctx.lineTo(.4,.45); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if(v.level>=5){ ctx.strokeStyle=rgba(sc,.9); ctx.beginPath(); ctx.moveTo(1.6,0); ctx.lineTo(2.3,0); ctx.stroke(); }
+    ctx.fillStyle="#cfefff"; for(let k=0;k<5;k++) ctx.fillRect(-.5+k*.2,-.06,.09,.12);
+    ctx.fillStyle=rgba(sc,.9); ctx.fillRect(.1,-.18,.35,.08); ctx.fillRect(.1,.1,.35,.08);
+    const fl = .7+.3*Math.sin(t*25);
+    [-.15,.15].forEach(oy=>{ const eg=ctx.createRadialGradient(-1.25,oy,0,-1.25,oy,.5*fl); eg.addColorStop(0,"rgba(255,255,255,.95)"); eg.addColorStop(.3,"rgba(120,220,255,.8)"); eg.addColorStop(1,"rgba(63,240,255,0)"); ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(-1.25,oy,.5*fl,0,Math.PI*2); ctx.fill(); });
+    ctx.restore();
+  }
+
+  function drawMeteor(m){
+    const u=E.u;
+    const sp = Math.hypot(m.vx,m.vy)||1;
+    const tg = ctx.createLinearGradient(m.x,m.y,m.x-m.vx/sp*m.r*5,m.y-m.vy/sp*m.r*5);
+    tg.addColorStop(0, m.pirate?"rgba(255,77,106,.6)":"rgba(255,150,80,.55)"); tg.addColorStop(1,"rgba(255,80,40,0)");
+    ctx.strokeStyle=tg; ctx.lineWidth=m.r*1.1; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(m.x,m.y); ctx.lineTo(m.x-m.vx/sp*m.r*5, m.y-m.vy/sp*m.r*5); ctx.stroke(); ctx.lineCap="butt";
+    ctx.save(); ctx.translate(m.x,m.y);
+    if(m.pirate){
+      ctx.rotate(Math.atan2(m.vy,m.vx)); const s=m.r;
+      ctx.fillStyle="#2a0c16"; ctx.strokeStyle=COL.loss; ctx.lineWidth=1.4*u;
+      ctx.beginPath(); ctx.moveTo(s*1.3,0); ctx.lineTo(-s,-s*.9); ctx.lineTo(-s*.45,0); ctx.lineTo(-s,s*.9); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle="#ff9aa9"; ctx.fillRect(-s*1.2,-1,s*.5,2);
+    } else {
+      ctx.rotate(m.rot); ctx.beginPath();
+      m.shape.forEach((k,i)=>{ const a=i/m.shape.length*Math.PI*2; ctx.lineTo(Math.cos(a)*m.r*k, Math.sin(a)*m.r*k); });
+      ctx.closePath(); ctx.fillStyle="#5b4a44"; ctx.fill(); ctx.strokeStyle="rgba(255,140,90,.75)"; ctx.lineWidth=1.2*u; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function reticle(x,y,r,c){
+    const t=E.t;
+    ctx.save(); ctx.translate(x,y); ctx.rotate(t*.8);
+    ctx.strokeStyle=c; ctx.lineWidth=1.5*E.u; ctx.setLineDash([5*E.u,4*E.u]); circle(0,0,r); ctx.stroke(); ctx.setLineDash([]);
+    for(let k=0;k<4;k++){ const a=k*Math.PI/2; ctx.beginPath(); ctx.moveTo(Math.cos(a)*(r+3*E.u),Math.sin(a)*(r+3*E.u)); ctx.lineTo(Math.cos(a)*(r+9*E.u),Math.sin(a)*(r+9*E.u)); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function draw(){
+    const v=E.view, u=E.u;
+    const warp = drawBackground();
+    if(!v) return;
+    ctx.globalAlpha = 1 - .7*warp;
+    E.systems.forEach(drawSystem);
+    const sel = E.sel, hov = E.hover;
+    E.sats.forEach(s=>{
+      const focus = (sel && sel.type==="asset" && sel.id===s.id) || (hov && hov.kind==="asset" && hov.id===s.id);
+      drawSat(s, focus);
+    });
+    // navi cargo
+    E.cargos.forEach(c=>{
+      const s=E.satMap.get(c.from); if(!s) return;
+      const x0=s.x,y0=s.y,x2=E.ms.x,y2=E.ms.y, mx=(x0+x2)/2, my=(y0+y2)/2, dx=x2-x0, dy=y2-y0;
+      const cx=mx-dy*c.bend, cy=my+dx*c.bend;
+      const B=(t)=>[(1-t)*(1-t)*x0+2*(1-t)*t*cx+t*t*x2, (1-t)*(1-t)*y0+2*(1-t)*t*cy+t*t*y2];
+      const [px,py]=B(c.t), [qx,qy]=B(Math.max(0,c.t-.06));
+      ctx.strokeStyle=rgba(COL.profit,.35); ctx.lineWidth=1.2*u; ctx.beginPath(); ctx.moveTo(qx,qy); ctx.lineTo(px,py); ctx.stroke();
+      ctx.save(); ctx.translate(px,py); ctx.rotate(Math.atan2(py-qy,px-qx));
+      ctx.fillStyle=COL.profit; ctx.beginPath(); ctx.moveTo(4*u,0); ctx.lineTo(-3*u,-2.6*u); ctx.lineTo(-3*u,2.6*u); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    });
+    drawMothership();
+    E.meteors.forEach(drawMeteor);
+    E.beams.forEach(b=>{ ctx.strokeStyle=rgba(COL.shield,b.life/.18); ctx.lineWidth=2*u; ctx.beginPath(); ctx.moveTo(E.ms.x,E.ms.y); ctx.lineTo(b.x,b.y); ctx.stroke(); });
+    E.rings.forEach(r=>{ const k=1-r.life/r.max; ctx.strokeStyle=rgba(r.c,r.life/r.max*.8); ctx.lineWidth=1.5*u; circle(r.x,r.y,r.r0+(r.r1-r.r0)*k); ctx.stroke(); });
+    E.parts.forEach(p=>{
+      const a = clamp(p.life/p.max,0,1);
+      if(p.text){ ctx.font=`700 ${Math.round(12*Math.max(u,.85))}px Oxanium, sans-serif`; ctx.textAlign="center"; ctx.fillStyle=rgba(p.c,a); ctx.fillText(p.text,p.x,p.y); }
+      else { ctx.fillStyle=rgba(p.c,a); ctx.fillRect(p.x,p.y,p.sz,p.sz); }
+    });
+    if(sel && sel.type==="asset"){ const s=E.satMap.get(sel.id); if(s) reticle(s.x,s.y,s.r+6*u,COL.shield); }
+    if(sel && sel.type==="system"){ const s=E.systems.find(q=>q.id===sel.id); if(s) reticle(s.x,s.y,s.r+8*u,COL.shield); }
+    ctx.globalAlpha = 1;
+    if(v.redAlert){ ctx.fillStyle=`rgba(255,20,50,${.05+.05*Math.sin(E.t*6)})`; ctx.fillRect(0,0,E.W,E.H); }
+    const wp=(E.t-E.warpAt)/1.8;
+    if(wp>=0 && wp<=1){ const f=Math.max(0,1-Math.abs(wp-.45)*7); if(f>0){ ctx.fillStyle=`rgba(200,250,255,${f*.45})`; ctx.fillRect(0,0,E.W,E.H); } }
+  }
+
+  /* ---------- input ---------- */
+  function pick(x,y){
+    for(let i=E.meteors.length-1;i>=0;i--){ const m=E.meteors[i]; if(Math.hypot(m.x-x,m.y-y) < m.r+12) return {kind:"meteor", idx:i, id:m.target}; }
+    let best=null, bd=1e9;
+    E.sats.forEach(s=>{ const d=Math.hypot(s.x-x,s.y-y); if(d<Math.max(s.r+5,10) && d<bd){ bd=d; best={kind:"asset", id:s.id}; } });
+    if(best) return best;
+    for(const s of E.systems){ if(Math.hypot(s.x-x,s.y-y) < s.r+4) return {kind:"system", id:s.id}; }
+    if(Math.hypot(E.ms.x-x,E.ms.y-y) < E.ms.size*1.5) return {kind:"ship"};
+    return null;
+  }
+  const pos = e => { const r=canvas.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  function onMove(e){
+    const [x,y]=pos(e), p=pick(x,y); E.hover=p;
+    canvas.style.cursor = !p ? "default" : p.kind==="meteor" ? "crosshair" : "pointer";
+    cb.onHover(p ? {...p, x, y, w:E.W, h:E.H} : null);
+  }
+  function onDown(e){
+    const [x,y]=pos(e), p=pick(x,y);
+    if(!p) return;
+    if(p.kind==="meteor") kill(p.idx);
+    else if(p.kind==="asset") cb.onSelect({type:"asset", id:p.id});
+    else if(p.kind==="system") cb.onSelect({type:"system", id:p.id});
+    else cb.onSelect(null);
+  }
+  function onLeave(){ E.hover=null; cb.onHover(null); }
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerdown", onDown);
+  canvas.addEventListener("pointerleave", onLeave);
+
+  let last = performance.now();
+  function loop(now){
+    if(!E.run) return;
+    const dt = Math.min(.05,(now-last)/1000); last = now; E.t += dt;
+    update(dt); draw();
+    requestAnimationFrame(loop);
+  }
+  const ro = new ResizeObserver(resize); ro.observe(canvas);
+  resize(); requestAnimationFrame(loop);
+
+  return {
+    setView, setSelected(s){ E.sel=s; }, warp(){ E.warpAt=E.t; },
+    destroy(){ E.run=false; ro.disconnect(); canvas.removeEventListener("pointermove",onMove); canvas.removeEventListener("pointerdown",onDown); canvas.removeEventListener("pointerleave",onLeave); }
+  };
+}
+
+/* ================= diagnosi di bordo ================= */
+function assetDiag(p, mode){
+  const out = [];
+  if(p.pnlPct!=null && p.pnlPct<=-.15) out.push(["crit","Sotto attacco: "+pctS(p.pnlPct)+" dal prezzo di carico. Il prezzo pagato non dice nulla sul futuro: la domanda utile è se il motivo per cui l'hai comprato regge ancora."]);
+  else if(p.pnlPct!=null && p.pnlPct<0) out.push(["warn","In perdita lieve ("+pctS(p.pnlPct)+"). Rumore normale per un singolo strumento."]);
+  if(p.pnlPct!=null && p.pnlPct>=.4) out.push(["ok","Forte profitto ("+pctS(p.pnlPct)+"). Se il peso è cresciuto oltre quello che avevi deciso, è un candidato al ribilanciamento, non un trofeo."]);
+  if((p.sub==="stock"||p.sub==="crypto") && p.weight>=.10) out.push(["crit","Concentrazione: un singolo "+(p.sub==="crypto"?"token":"titolo")+" pesa il "+pct(p.weight)+" della flotta."]);
+  if(p.sub==="etf" && p.weight>=.5) out.push(["info","Asse portante: questo ETF è la flotta. È diversificato al suo interno, quindi un peso alto qui non è rischio di concentrazione."]);
+  if(p.weight<.01) out.push(["info","Pesa "+pct(p.weight,2)+": anche raddoppiando sposterebbe il totale di meno di un punto. Complica la plancia senza cambiare il risultato."]);
+  if(p.sub==="crypto") out.push(["warn","Volatilità ipotizzata nella proiezione: 70% annuo, oltre 4 volte un ETF azionario globale."]);
+  if(mode==="stress") out.push(["crit","Stress test: prezzo scontato del "+pct(-SUBS[p.sub].shock,0)+" rispetto a oggi."]);
+  return out;
+}
+function fleetDiag(d, ds){
+  const out = [];
+  const top = [...d.pos].sort((a,b)=>b.weight-a.weight)[0];
+  const cr = d.systems.find(s=>s.id==="crypto"), sf = d.systems.find(s=>s.id==="safe"), eq = d.systems.find(s=>s.id==="equity");
+  out.push([top.sub==="etf"?"info":"warn", `Satellite più grande: ${top.t} al ${pct(top.weight)}${top.sub==="etf"?", un ETF diversificato: è la spina dorsale, non un rischio.":"."}`]);
+  if(cr.weight>.10) out.push(["warn",`Nebulose al ${pct(cr.weight)}: un quarto di crollo crypto da solo toglierebbe ${pct(cr.weight*.65)} alla flotta.`]);
+  if(cr.weight===0) out.push(["info","Settore nebulose vuoto: nessuna crypto in portafoglio."]);
+  if(sf.weight<.05) out.push(["warn",`Stazioni stabili al ${pct(sf.weight)}: quasi nessun ammortizzatore. In un crollo tutta la flotta prende il colpo insieme (prova lo stress test).`]);
+  const small = d.pos.filter(p=>p.weight<.01);
+  if(small.length>=4) out.push(["warn",`${small.length} satelliti su ${d.pos.length} pesano meno dell'1% ciascuno (${pct(small.reduce((s,p)=>s+p.weight,0))} in tutto). Rumore di flotta: tanti strumenti da seguire per un effetto trascurabile.`]);
+  const losers = d.pos.filter(p=>p.pnlPct!=null && p.pnlPct<0);
+  if(losers.length) out.push(["info",`${losers.length} posizioni in perdita, ${pct(losers.reduce((s,p)=>s+p.weight,0))} della flotta. Sono loro ad attirare meteoriti e pirati.`]);
+  if(eq.weight>0 && eq.positions.length) { const w=eq.weight; if(w>.25) out.push(["warn",`Azioni singole al ${pct(w)}: oltre un quarto della flotta dipende da poche aziende.`]); }
+  return out;
+}
+
+/* ================= componenti ================= */
+function Diag({items}){
+  const L = {crit:"ALERT", warn:"NOTA", info:"INFO", ok:"OK"};
+  return html`<ul className="diag">${items.map(([s,t],i)=>html`<li key=${i}><span className=${"sev "+s}>${L[s]}</span><span>${t}</span></li>`)}</ul>`;
+}
+function Rows({rows}){
+  return html`<dl className="rows">${rows.filter(Boolean).map(([k,v,c])=>html`<div key=${k}><dt>${k}</dt><dd className=${c||""}>${v}</dd></div>`)}</dl>`;
+}
+const sigCls = x => x==null ? "nd" : Math.abs(x)<.0005 ? "flat" : x>0 ? "up" : "down";
+
+function ShieldBar({v}){
+  const on = Math.round(v/5), lvl = v>60?"ok":v>30?"mid":"low";
+  return html`<div className=${"cells "+lvl} role="meter" aria-label="Energia scudo" aria-valuemin="0" aria-valuemax="100" aria-valuenow=${v}>
+    ${Array.from({length:20},(_,i)=>html`<i key=${i} className=${i<on?"on":""}></i>`)}</div>`;
+}
+
+function TopBar({dsId,onDs,cls,escorts,mode,proj,d,shield,score,best,stats}){
+  const isProj = mode==="proj" && proj;
+  const shown = isProj ? proj.p50 : d.total;
+  const gain = isProj ? proj.p50-proj.contributed : d.totalPnl;
+  const gainPct = isProj ? proj.p50/proj.contributed-1 : d.totalPnlPct;
+  const shieldTxt = shield>=70?"stabile":shield>=40?"sotto sforzo":"critico";
+  return html`<header className="top frame">
+    <div className="brand">
+      <span className="lbl">Galactic Portfolio Command</span>
+      <h1>Nave madre · <em>${cls.name}</em></h1>
+      <span className="sub">${cls.next ? "prossima classe a "+eur(cls.next,0) : "classe massima"} · scorta di ${escorts} navi</span>
+    </div>
+    <div className="stat">
+      <span className="lbl">${isProj?"Valore mediano a +"+proj.years+"a":mode==="stress"?"Controvalore dopo il crollo":"Controvalore"}</span>
+      <span className="val">${eur(shown,0)}</span>
+      <span className="sub">${isProj ? "versato in totale "+eur(proj.contributed,0) : mode==="stress" ? pctS(d.drawdown)+" rispetto a oggi" : d.pos.length+" posizioni · carico "+eur(d.invested,0)}</span>
+    </div>
+    <div className="stat">
+      <span className="lbl">${isProj?"Guadagno vs versato":"PnL non realizzato"}</span>
+      <span className=${"val "+sigCls(gain)}>${eurS(gain)}</span>
+      <span className="sub">${pctS(gainPct)}</span>
+    </div>
+    <div className="stat">
+      <span className="lbl">Scudo deflettore</span>
+      <${ShieldBar} v=${shield}/>
+      <span className="sub">${shield}% · ${shieldTxt}</span>
+    </div>
+    <div className="stat">
+      <span className="lbl">Difesa</span>
+      <span className="val">${score}</span>
+      <span className="sub">record ${best} · minacce in volo ${stats.threats}</span>
+    </div>
+    <nav className="tabs" aria-label="Fonte dati">
+      ${Object.values(DATASETS).map(x=>html`<button key=${x.id} className=${"tab"+(x.id===dsId?" on":"")} aria-pressed=${x.id===dsId} onClick=${()=>onDs(x.id)}>${x.tab}<small>${x.badge}</small></button>`)}
+    </nav>
+  </header>`;
+}
+
+function Tooltip({tipRef,d}){
+  const [h,setH] = useState(null);
+  tipRef.current = setH;
+  if(!h) return null;
+  let body = null;
+  if(h.kind==="asset" || h.kind==="meteor"){
+    const p = d.pos.find(q=>q.id===h.id); if(!p) return null;
+    body = h.kind==="meteor"
+      ? html`<b className="down">${p.sub==="crypto"?"PIRATI":"METEORITE"}</b><div>in rotta su ${p.t} (${p.pnlPct!=null?pctS(p.pnlPct):"n/d"})</div><div className="sub">Clicca per abbatterlo</div>`
+      : html`<b style=${{color:SYSTEMS[p.sys].color}}>${p.t}</b><div className="sub" style=${{marginBottom:4}}>${p.name}</div>
+          <div className="r"><span>Controvalore</span><span>${eur(p.value)}</span></div>
+          <div className="r"><span>Peso</span><span>${pct(p.weight,2)}</span></div>
+          <div className="r"><span>PnL</span><span className=${sigCls(p.pnlPct)}>${p.pnlPct!=null?pctS(p.pnlPct):"n/d"}</span></div>`;
+  } else if(h.kind==="system"){
+    const s = d.systems.find(q=>q.id===h.id), def = SYSTEMS[h.id];
+    body = html`<b style=${{color:def.color}}>${def.game.toUpperCase()}</b><div className="sub">${def.label}</div>
+      <div className="r"><span>Controvalore</span><span>${eur(s.value,0)}</span></div>
+      <div className="r"><span>Peso</span><span>${pct(s.weight)}</span></div>
+      <div className="r"><span>Satelliti</span><span>${s.positions.length}</span></div>`;
+  } else {
+    body = html`<b className="up">NAVE MADRE</b><div className="sub">Clicca per il rapporto di plancia</div>`;
+  }
+  const left = Math.min(h.x+14, h.w-240), top = h.y+110>h.h ? h.y-110 : h.y+14;
+  return html`<div className="tip" style=${{left:Math.max(4,left), top:Math.max(4,top)}}>${body}</div>`;
+}
+
+function HoloLog({sel,d,ds,mode,onSelect}){
+  let content, key="overview";
+  if(sel && sel.type==="asset"){
+    const p = d.pos.find(q=>q.id===sel.id);
+    if(p){
+      key = "a-"+p.id;
+      const def = SYSTEMS[p.sys], sub = SUBS[p.sub];
+      const sig = p.signal;
+      const status = sig==null ? "Telemetria PnL assente: satellite in grigio."
+        : sig < -.005 ? `Sotto attacco da ${p.sub==="crypto"?"pirati":"meteoriti"}: circa ${NF(0).format(meteorRate(sig)*60)} al minuto, in proporzione alla perdita.`
+        : sig > .005 ? `Scudi verdi: circa ${NF(0).format(cargoRate(sig)*60)} navi cargo al minuto portano risorse alla nave madre, in proporzione al guadagno.`
+        : "Stabile: né attacchi né carichi.";
+      content = html`
+        <div className="tkbig" style=${{color:def.color}}>${p.t}</div>
+        <div className="nm-big">${p.name}</div>
+        <div className="chips"><span className="chip">${sub.label}</span><span className="chip">${def.game}</span>${p.isin && html`<span className="chip">ISIN ${p.isin}</span>`}</div>
+        <${Rows} rows=${[
+          [mode==="stress"?"Prezzo dopo il crollo":"Prezzo", priceF(p.price)],
+          mode==="stress" && ["Prezzo oggi", priceF(p.basePrice)],
+          ["Quantità", qtyF(p.qty)],
+          ["Controvalore", eur(p.value)],
+          ["Peso in flotta", pct(p.weight,2)],
+          ["Prezzo di carico", p.avg!=null?priceF(p.avg):"n/d"],
+          ["PnL", p.pnl!=null?eurS(p.pnl,2):"n/d", sigCls(p.pnl)],
+          ["PnL %", p.pnlPct!=null?pctS(p.pnlPct,2):"n/d", sigCls(p.pnlPct)]
+        ]}/>
+        <p className="decode">Satellite in orbita attorno al ${def.game.toLowerCase()}. L'area è proporzionale al peso. ${status}</p>
+        <${Diag} items=${assetDiag(p,mode)}/>`;
+    }
+  } else if(sel && sel.type==="system"){
+    const s = d.systems.find(q=>q.id===sel.id), def = SYSTEMS[sel.id];
+    key = "s-"+sel.id;
+    content = html`
+      <div className="tkbig" style=${{color:def.color, fontSize:24}}>${def.game.toUpperCase()}</div>
+      <div className="nm-big">${def.label}</div>
+      ${s.ghost ? html`<p className="note">Settore vuoto: nessuna posizione di questa classe nella flotta.</p>` : html`
+        <${Rows} rows=${[["Controvalore",eur(s.value,0)],["Peso",pct(s.weight)],["Satelliti",String(s.positions.length)],["PnL", s.pnl!=null?eurS(s.pnl)+" ("+pctS(s.pnlPct)+")":"n/d", sigCls(s.pnl)]]}/>
+        <div className="sbars">${s.positions.map(p=>html`<button key=${p.id} className="sbar" onClick=${()=>onSelect({type:"asset",id:p.id})}>
+          <span><b>${p.t}</b> <span className="sub">${p.name}</span></span><span className=${sigCls(p.pnlPct)}>${p.pnlPct!=null?pctS(p.pnlPct):"n/d"}</span>
+          <span className="track"><span className="fill" style=${{display:"block",width:Math.max(1,p.value/s.value*100)+"%",background:def.color}}></span></span></button>`)}</div>`}`;
+  }
+  if(!content){
+    content = html`
+      <${Rows} rows=${[
+        ["Controvalore", eur(d.total)],
+        ["Prezzo di carico totale", eur(d.invested,0)],
+        ["PnL non realizzato", eurS(d.totalPnl,0)+" ("+pctS(d.totalPnlPct)+")", sigCls(d.totalPnl)],
+        ds.maxReturn!=null && mode!=="stress" && ["Rendimento dall'inizio (API)", eurS(ds.maxReturn,0), "up"],
+        ["Posizioni", String(d.pos.length)],
+        ["PAC mensile", eur(ds.pac,0)]
+      ]}/>
+      <div className="sbars">${d.systems.map(s=>{ const def=SYSTEMS[s.id]; return html`<button key=${s.id} className="sbar" onClick=${()=>onSelect({type:"system",id:s.id})}>
+        <span><b style=${{color:def.color}}>${def.game}</b> <span className="sub">${def.label}</span></span><span>${pct(s.weight)}</span>
+        <span className="track"><span className="fill" style=${{display:"block",width:Math.max(s.ghost?0:1,s.weight*100)+"%",background:def.color}}></span></span></button>`; })}</div>
+      <p className="note">${ds.pacNote}</p>
+      <${Diag} items=${fleetDiag(d,ds)}/>`;
+  }
+  return html`<section className="panel frame holo">
+    <h2 className="ph"><span>${sel?"Holo-Log del Capitano":"Rapporto di plancia"}</span>${sel && html`<button onClick=${()=>onSelect(null)}>torna al rapporto</button>`}</h2>
+    <div key=${key} className="holo-in">${content}</div>
+  </section>`;
+}
+
+function Manifest({d,sel,onSelect}){
+  return html`<section className="panel frame">
+    <h2 className="ph"><span>Manifesto di flotta</span></h2>
+    ${d.systems.map(s=>{ const def=SYSTEMS[s.id]; return html`<div className="mgroup" key=${s.id}>
+      <button className="mhead" onClick=${()=>onSelect({type:"system",id:s.id})}><i className="dot" style=${{background:def.color, boxShadow:"0 0 8px "+def.color}}></i>${def.game}<span>${def.label}</span><b>${pct(s.weight)}</b></button>
+      ${s.ghost ? html`<div className="empty">Nessuna posizione</div>` : html`<ul>${s.positions.map(p=>html`<li key=${p.id}>
+        <button className=${"mrow"+(sel&&sel.type==="asset"&&sel.id===p.id?" on":"")} onClick=${()=>onSelect({type:"asset",id:p.id})}>
+          <span className="tk">${p.t}</span><span className="nm">${p.name}</span><span className="wt">${pct(p.weight)}</span>
+          <span className=${"pn "+sigCls(p.pnlPct)}>${p.pnlPct!=null?pctS(p.pnlPct):"n/d"}</span></button></li>`)}</ul>`}
+    </div>`; })}
+  </section>`;
+}
+
+function FanChart({proj}){
+  const W=340, H=180, L=46, R=12, T=10, B=24, s=proj.series, M=s.length-1;
+  const raw = Math.max(...s.map(p=>p.p90));
+  const e = Math.pow(10,Math.floor(Math.log10(raw))), f = raw/e;
+  const ymax = (f<=1?1:f<=1.5?1.5:f<=2?2:f<=3?3:f<=4?4:f<=5?5:f<=6?6:f<=8?8:10)*e;
+  const x = m => L + (W-L-R)*m/M, y = v => H-B - (H-T-B)*v/ymax;
+  const band = s.map(p=>`${x(p.m).toFixed(1)},${y(p.p90).toFixed(1)}`).join(" ")+" "+[...s].reverse().map(p=>`${x(p.m).toFixed(1)},${y(p.p10).toFixed(1)}`).join(" ");
+  const med = s.map((p,i)=>`${i?"L":"M"}${x(p.m).toFixed(1)},${y(p.p50).toFixed(1)}`).join("");
+  const xt = proj.years===1 ? [[0,"oggi"],[6,"+6m"],[12,"+1a"]] : (proj.years<=5 ? Array.from({length:proj.years+1},(_,k)=>[k*12, k?"+"+k+"a":"oggi"]) : Array.from({length:proj.years/5+1},(_,k)=>[k*60, k?"+"+k*5+"a":"oggi"]));
+  return html`<svg className="fan" viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${"Ventaglio della proiezione: mediano "+eur(proj.p50,0)}>
+    ${[0,.25,.5,.75,1].map(k=>html`<line key=${k} className="grid" x1=${L} x2=${W-R} y1=${y(ymax*k)} y2=${y(ymax*k)}></line>`)}
+    ${[0,.5,1].map(k=>html`<text key=${"t"+k} x=${L-6} y=${y(ymax*k)+3} textAnchor="end">${eurK(ymax*k).replace("€0,0k","€0")}</text>`)}
+    ${xt.map(([m,l])=>html`<text key=${"x"+m} x=${x(m)} y=${H-6} textAnchor="middle">${l}</text>`)}
+    <polygon className="band" points=${band}></polygon>
+    <line className="inv" x1=${x(0)} y1=${y(proj.start)} x2=${x(M)} y2=${y(proj.contributed)}></line>
+    <path className="med" d=${med}></path>
+    <circle cx=${x(M)} cy=${y(proj.p50)} r="3.5" fill="#3ff0ff"></circle>
+  </svg>`;
+}
+
+function ProjCard({proj}){
+  return html`<section className="panel frame holo">
+    <h2 className="ph"><span>Hyperdrive · +${proj.years} ${proj.years===1?"anno":"anni"}</span></h2>
+    <div className="holo-in" key=${proj.years}>
+      <span className="lbl">Scenario mediano</span>
+      <div className="big">${eur(proj.p50,0)}</div>
+      <${Rows} rows=${[
+        ["Scenario sfavorevole (1 su 10)", eur(proj.p10,0), proj.p10<proj.contributed?"down":""],
+        ["Scenario favorevole (1 su 10)", eur(proj.p90,0), "up"],
+        ["Versato in totale", eur(proj.contributed,0)],
+        ["Scenari sotto il versato", pct(proj.probBelow,0), proj.probBelow>.2?"down":""]
+      ]}/>
+      <${FanChart} proj=${proj}/>
+      <div className="keyline"><span><i style=${{borderColor:"#3ff0ff"}}></i>mediano</span><span><i style=${{borderColor:"rgba(63,240,255,.35)", borderTopWidth:8}}></i>10°–90° percentile</span><span><i style=${{borderColor:"#ffb547", borderTopStyle:"dashed"}}></i>versato</span></div>
+      <table className="atable"><thead><tr><th>Classe</th><th>Rend. atteso</th><th>Volatilità</th></tr></thead>
+        <tbody>${proj.subs.map(k=>html`<tr key=${k}><td>${SUBS[k].label}</td><td>${pct(SUBS[k].mu)}</td><td>${pct(SUBS[k].sigma,0)}</td></tr>`)}</tbody></table>
+      <p className="note">Ipotesi illustrative, non una previsione: 2.000 scenari mensili, PAC di ${eur(proj.pac,0)}/mese ripartito sui pesi attuali, ribilanciamento mensile, senza tasse, costi né inflazione. Il mediano non è lo scenario "probabile": metà degli scenari finisce sotto.</p>
+    </div>
+  </section>`;
+}
+
+function StressCard({d}){
+  const subs = [...new Set(d.pos.map(p=>p.sub))];
+  const loss = d.total - d.baseTotal;
+  return html`<section className="panel frame holo">
+    <h2 className="ph"><span style=${{color:"var(--loss)"}}>Stress test · crollo sincronizzato</span></h2>
+    <div className="holo-in">
+      <div className="big" style=${{color:"var(--loss)", textShadow:"0 0 16px rgba(255,77,106,.5)"}}>${eurS(loss)}</div>
+      <${Rows} rows=${[["Flotta oggi", eur(d.baseTotal,0)],["Flotta dopo il crollo", eur(d.total,0)],["Perdita", pctS(d.drawdown), "down"]]}/>
+      <table className="atable"><thead><tr><th>Classe</th><th>Shock</th></tr></thead>
+        <tbody>${subs.map(k=>html`<tr key=${k}><td>${SUBS[k].label}</td><td className=${SUBS[k].shock<0?"down":SUBS[k].shock>0?"up":""}>${pctS(SUBS[k].shock,0)}</td></tr>`)}</tbody></table>
+      <p className="note">Shock applicati tutti insieme e all'istante. Nel 2008 l'azionario globale ha perso oltre il 50% dal picco in circa 17 mesi; nel 2022 bitcoin circa il 75%. È uno scenario severo, non una previsione: serve a vedere se reggeresti il colpo senza vendere.</p>
+    </div>
+  </section>`;
+}
+
+/* ================= app ================= */
+function App({boot}){
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [dsId,setDsId] = useState(boot.dsId && DATASETS[boot.dsId] ? boot.dsId : "real");
+  const [mode,setMode] = useState("live");
+  const [years,setYears] = useState(10);
+  const [proj,setProj] = useState(null);
+  const [sel,setSel] = useState(null);
+  const [score,setScore] = useState(boot.score||0);
+  const [best,setBest] = useState(()=>{ try{ return +localStorage.getItem("gpc-best")||0; }catch(e){ return 0; } });
+  const [stats,setStats] = useState({threats:0,hits:0});
+  const [warping,setWarping] = useState(false);
+  const canvasRef = useRef(null), engRef = useRef(null), tipRef = useRef(null), stateRef = useRef({});
+  stateRef.current = {dsId, score};
+
+  const ds = DATASETS[dsId];
+  const d = useMemo(()=>derive(ds, mode==="stress"), [dsId, mode]);
+  const isProj = mode==="proj" && proj;
+  const shownTotal = isProj ? proj.p50 : d.total;
+  const gainPct = isProj ? proj.p50/proj.contributed-1 : d.totalPnlPct;
+  const shield = shieldOf(gainPct);
+  const cls = shipClass(shownTotal);
+  const escorts = escortsOf(shownTotal);
+  const redAlert = mode==="stress" ? d.drawdown<=-.15 : (mode==="live" && d.totalPnlPct<=-.10);
+
+  useEffect(()=>{
+    const eng = createEngine(canvasRef.current, {
+      onKill: p => setScore(s=>s+p),
+      onSelect: setSel,
+      onHover: h => tipRef.current && tipRef.current(h),
+      onStats: setStats
+    });
+    engRef.current = eng;
+    window.claude?.hot?.snapshot?.(() => ({...stateRef.current}));
+    return () => eng.destroy();
+  },[]);
+  useEffect(()=>{ engRef.current?.setView({d, dsKey:dsId, mode, shield, level:cls.level, escorts, redAlert}); },[d,dsId,mode,shield,cls.level,escorts,redAlert]);
+  useEffect(()=>{ engRef.current?.setSelected(sel); },[sel]);
+  useEffect(()=>{ if(score>best){ setBest(score); try{ localStorage.setItem("gpc-best",String(score)); }catch(e){} } },[score]);
+  useEffect(()=>{ const k=e=>{ if(e.key==="Escape") setSel(null); }; window.addEventListener("keydown",k); return ()=>window.removeEventListener("keydown",k); },[]);
+
+  const switchDs = id => { setDsId(id); setMode("live"); setProj(null); setSel(null); };
+  const jump = () => {
+    if(warping) return;
+    const res = project(derive(ds,false), years, ds.pac);
+    engRef.current?.warp(); setWarping(true);
+    setTimeout(()=>{ setProj(res); setMode("proj"); setSel(null); }, reduce?0:700);
+    setTimeout(()=>setWarping(false), reduce?200:1800);
+  };
+  const toggleStress = () => { setMode(m=>m==="stress"?"live":"stress"); setProj(null); };
+  const tag = mode==="proj" && proj ? `Proiezione +${proj.years}a · scenario mediano` : mode==="stress" ? "Stress test attivo" : ds.tag;
+
+  return html`<div className=${"app"+(redAlert?" is-alert":"")}>
+    <${TopBar} dsId=${dsId} onDs=${switchDs} cls=${cls} escorts=${escorts} mode=${mode} proj=${proj} d=${d} shield=${shield} score=${score} best=${best} stats=${stats}/>
+    <div className="deck">
+      <div className="mapcol">
+        <div className="map frame">
+          <canvas ref=${canvasRef} role="img" aria-label="Mappa stellare del portafoglio: ogni sistema è una classe di attivi, ogni satellite una posizione. I dati completi sono nel manifesto di flotta."></canvas>
+          <div className="mode-tag">${tag}</div>
+          <${Tooltip} tipRef=${tipRef} d=${d}/>
+          <div className="legend">
+            <span><i style=${{background:"var(--profit)"}}></i>in profitto · navi cargo</span>
+            <span><i style=${{background:"var(--loss)"}}></i>in perdita · meteoriti e pirati</span>
+            <span><i style=${{background:"var(--nd)"}}></i>area del satellite = peso</span>
+          </div>
+          ${redAlert && html`<div className="alert-layer"><div className="alert-banner">RED ALERT<span>scudi al ${shield}%</span></div></div>`}
+        </div>
+        <div className="controls frame">
+          <div className="grp">
+            <span className="lbl">Hyperdrive</span>
+            <div className="seg" role="group" aria-label="Orizzonte della proiezione">
+              ${[1,5,10,20].map(y=>html`<button key=${y} className=${years===y?"on":""} aria-pressed=${years===y} onClick=${()=>setYears(y)}>+${y}a</button>`)}
+            </div>
+            <button className="btn primary" onClick=${jump} disabled=${warping}>${warping?"Salto in corso…":"Salta"}</button>
+          </div>
+          <div className="grp">
+            <button className=${"btn danger"+(mode==="stress"?" on":"")} aria-pressed=${mode==="stress"} onClick=${toggleStress}>Stress test: crollo</button>
+            ${mode!=="live" && html`<button className="btn" onClick=${()=>{ setMode("live"); setProj(null); }}>Torna al presente</button>`}
+          </div>
+          <div className="hint">Clicca meteoriti e pirati per abbatterli · clicca un satellite per il suo Holo-Log</div>
+        </div>
+      </div>
+      <aside className="side">
+        ${mode==="proj" && proj && html`<${ProjCard} proj=${proj}/>`}
+        ${mode==="stress" && html`<${StressCard} d=${d}/>`}
+        <${HoloLog} sel=${sel} d=${d} ds=${ds} mode=${mode} onSelect=${setSel}/>
+        <${Manifest} d=${d} sel=${sel} onSelect=${setSel}/>
+        <p className="foot">Fonte: ${ds.source} Abbattere meteoriti non cambia i numeri: le perdite restano nei log.</p>
+      </aside>
+    </div>
+  </div>`;
+}
+
+function start(data){ ReactDOM.createRoot(document.getElementById("root")).render(html`<${App} boot=${data||{}}/>`); }
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
