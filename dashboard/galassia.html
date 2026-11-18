@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galassia del Portafoglio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  if (window.tailwind) tailwind.config = {
+    theme: { extend: {
+      fontFamily: { display: ['Orbitron', 'sans-serif'], mono: ['"JetBrains Mono"', 'monospace'] },
+    } }
+  };
+</script>
+<style>
+  html, body, #root { height: 100%; margin: 0; }
+  body {
+    background: #02030a; color: #dbeafe; overflow: hidden;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    -webkit-font-smoothing: antialiased;
+  }
+  .space-bg {
+    background:
+      radial-gradient(ellipse 60% 45% at 20% 30%, rgba(56, 74, 180, .22), transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 70%, rgba(130, 60, 170, .16), transparent 70%),
+      radial-gradient(ellipse 80% 60% at 50% 110%, rgba(14, 116, 144, .18), transparent 70%),
+      #02030a;
+  }
+  .glass {
+    background: linear-gradient(160deg, rgba(14, 24, 52, .78), rgba(6, 10, 26, .72));
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid rgba(125, 211, 252, .22);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .35), 0 0 32px rgba(56, 189, 248, .08);
+  }
+  .hud-corners::before, .hud-corners::after {
+    content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none;
+    border-color: rgba(103, 232, 249, .85); border-style: solid;
+  }
+  .hud-corners::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .hud-corners::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+  .neon { text-shadow: 0 0 8px rgba(103, 232, 249, .55), 0 0 22px rgba(56, 189, 248, .25); }
+  .scan::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px);
+  }
+  .btn-hud {
+    border: 1px solid rgba(103, 232, 249, .45); color: #a5f3fc;
+    background: rgba(8, 47, 73, .45); transition: all .2s;
+  }
+  .btn-hud:hover { background: rgba(14, 116, 144, .55); color: #ecfeff; box-shadow: 0 0 16px rgba(34, 211, 238, .35); }
+  .btn-hud:focus-visible, [role="button"]:focus-visible { outline: 2px solid #67e8f9; outline-offset: 2px; }
+  .panel-in { animation: panelIn .45s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes panelIn { from { opacity: 0; transform: translateX(24px) scale(.98); } to { opacity: 1; transform: none; } }
+  @media (max-width: 899px) {
+    @keyframes panelIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+  }
+  .blink { animation: blink 1.1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .aura { animation: pulse 3.2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+  .thin-scroll::-webkit-scrollbar { width: 6px; }
+  .thin-scroll::-webkit-scrollbar-thumb { background: rgba(103,232,249,.3); border-radius: 3px; }
+  svg text { user-select: none; }
+  @media (prefers-reduced-motion: reduce) { .aura, .blink { animation: none; } }
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="display:flex;height:100%;align-items:center;justify-content:center;font-family:monospace;color:#67e8f9;letter-spacing:.2em">
+    INIZIALIZZAZIONE NAVIGATORE STELLARE…
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+/* =====================================================================
+   DATI — estratti da Scalable Capital via MCP il 18/11/2026.
+   value  = controvalore (EUR) fornito dal broker
+   cost   = prezzo medio FIFO × quantità (costo di carico)
+   dividends = distribuzioni incassate dal registro movimenti (netto)
+   code   = sigla breve per la mappa (non è il ticker di borsa: l'ID è l'ISIN)
+   ===================================================================== */
+const PORTFOLIO = {
+  valuationUtc: "2026-11-18T14:19:11Z",
+  total: 39272.54,
+  performance: [
+    { label: "Oggi", value: 74.76 },
+    { label: "1 sett.", value: -473.09 },
+    { label: "1 mese", value: -1410.16 },
+    { label: "1 anno", value: 4018.78 },
+    { label: "Dall'inizio", value: 5226.10 },
+  ],
+  assets: [
+    {"isin": "LU2903252349", "name": "Scalable MSCI AC World Xtrackers (Acc)", "code": "ACWI", "system": "core", "type": "ETF", "value": 30777.96, "qty": 2582.259899, "fifo": 10.270577, "price": 11.919, "cost": 26521.3, "dividends": []},
+    {"isin": "IE00BFMXXD54", "name": "Vanguard S&P 500 (Acc)", "code": "SP500-V", "system": "core", "type": "ETF", "value": 1817.44, "qty": 14, "fifo": 94.776429, "price": 129.8175, "cost": 1326.87, "dividends": []},
+    {"isin": "IE00BTJRMP35", "name": "Xtrackers MSCI Emerging Markets (Acc)", "code": "EM-XT", "system": "em", "type": "ETF", "value": 1809.29, "qty": 24.438308, "fifo": 66.642912, "price": 74.035, "cost": 1628.64, "dividends": []},
+    {"isin": "IE00BP3QZ825", "name": "iShares Edge MSCI World Momentum (Acc)", "code": "MOMENTUM", "system": "core", "type": "ETF", "value": 1195.22, "qty": 13, "fifo": 100.832308, "price": 91.94, "cost": 1310.82, "dividends": []},
+    {"isin": "LU1681045370", "name": "Amundi MSCI EM Swap EUR (Acc)", "code": "EM-AMU", "system": "em", "type": "ETF", "value": 657.02, "qty": 93, "fifo": 5.341828, "price": 7.0647, "cost": 496.79, "dividends": []},
+    {"isin": "IE00B5BMR087", "name": "iShares Core S&P 500 (Acc)", "code": "SP500-IS", "system": "core", "type": "ETF", "value": 467.22, "qty": 0.64537, "fifo": 579.791437, "price": 723.96, "cost": 374.18, "dividends": []},
+    {"isin": "NL0011585146", "name": "Ferrari", "code": "RACE", "system": "stocks", "type": "STOCK", "value": 375.36, "qty": 1.016206, "fifo": 387.283681, "price": 369.375, "cost": 393.56, "dividends": [["2026-05-08", 2.15]]},
+    {"isin": "IE00BKM4GZ66", "name": "iShares Core MSCI EM IMI (Acc)", "code": "EM-IMI", "system": "em", "type": "ETF", "value": 362.12, "qty": 8.304, "fifo": 39.536368, "price": 43.6085, "cost": 328.31, "dividends": []},
+    {"isin": "IE00BGV5VN51", "name": "Xtrackers AI & Big Data (Acc)", "code": "AI-DATA", "system": "thematic", "type": "ETF", "value": 279.98, "qty": 1.443179, "fifo": 120.934409, "price": 194, "cost": 174.53, "dividends": []},
+    {"isin": "IE00B4ND3602", "name": "iShares Physical Gold ETC", "code": "GOLD", "system": "commod", "type": "ETC", "value": 267.07, "qty": 4, "fifo": 68.81, "price": 66.7675, "cost": 275.24, "dividends": []},
+    {"isin": "US5951121038", "name": "Micron Technology", "code": "MU", "system": "stocks", "type": "STOCK", "value": 230.75, "qty": 0.35089, "fifo": 997.691584, "price": 657.6, "cost": 350.08, "dividends": [["2026-07-20", 0.04], ["2026-10-30", 0.04]]},
+    {"isin": "US70450Y1038", "name": "PayPal Holdings", "code": "PYPL", "system": "stocks", "type": "STOCK", "value": 159.46, "qty": 3.022873, "fifo": 49.125451, "price": 52.75, "cost": 148.5, "dividends": [["2026-03-30", 0.31], ["2026-06-24", 0.31], ["2026-09-24", 0.31]]},
+    {"isin": "IE00BYZK4552", "name": "iShares Automation & Robotics (Acc)", "code": "ROBOTICS", "system": "thematic", "type": "ETF", "value": 142.41, "qty": 8.325875, "fifo": 12.007146, "price": 17.104, "cost": 99.97, "dividends": []},
+    {"isin": "US84615Q1031", "name": "SpaceX", "code": "SPACEX", "system": "stocks", "type": "STOCK", "value": 129.88, "qty": 1, "fifo": 130.66, "price": 129.88, "cost": 130.66, "dividends": []},
+    {"isin": "IE00BZCQB185", "name": "iShares MSCI India (Acc)", "code": "INDIA", "system": "em", "type": "ETF", "value": 125.16, "qty": 14.981496, "fifo": 8.676036, "price": 8.354, "cost": 129.98, "dividends": []},
+    {"isin": "IE00BYXG2H39", "name": "iShares Nasdaq US Biotechnology (Acc)", "code": "BIOTECH", "system": "thematic", "type": "ETF", "value": 112.26, "qty": 12.075295, "fifo": 6.211028, "price": 9.2965, "cost": 75.0, "dividends": []},
+    {"isin": "IE00BYZK4669", "name": "iShares Ageing Population (Acc)", "code": "AGEING", "system": "thematic", "type": "ETF", "value": 111.37, "qty": 11.77, "fifo": 7.220051, "price": 9.462, "cost": 84.98, "dividends": []},
+    {"isin": "IT0004764699", "name": "Brunello Cucinelli", "code": "BC", "system": "stocks", "type": "STOCK", "value": 90.14, "qty": 1.009313, "fifo": 82.51157, "price": 89.31, "cost": 83.28, "dividends": [["2026-05-19", 0.77]]},
+    {"isin": "IE00B4L5Y983", "name": "iShares Core MSCI World (Acc)", "code": "WORLD", "system": "core", "type": "ETF", "value": 68.92, "qty": 0.539, "fifo": 101.87384, "price": 127.8675, "cost": 54.91, "dividends": []},
+    {"isin": "IE00B3ZW0K18", "name": "iShares S&P 500 EUR Hedged (Acc)", "code": "SP500-H", "system": "core", "type": "ETF", "value": 46.36, "qty": 0.308, "fifo": 113.116883, "price": 150.51, "cost": 34.84, "dividends": []},
+    {"isin": "LU0328476410", "name": "Xtrackers S&P Select Frontier Swap (Acc)", "code": "FRONTIER", "system": "em", "type": "ETF", "value": 24.73, "qty": 0.989, "fifo": 20.202224, "price": 25.01, "cost": 19.98, "dividends": []},
+    {"isin": "LU0514694370", "name": "Xtrackers MSCI Malaysia (Acc)", "code": "MALAYSIA", "system": "em", "type": "ETF", "value": 22.32, "qty": 1.834, "fifo": 10.899673, "price": 12.169, "cost": 19.99, "dividends": []}
+  ],
+};
+
+const SYSTEMS = [
+  { id: "core",     name: "Core Globale",    sub: "Azionario globale e USA",           color: "#3987e5" },
+  { id: "em",       name: "Emergenti",       sub: "Mercati emergenti e di frontiera",  color: "#9085e9" },
+  { id: "stocks",   name: "Azioni Singole",  sub: "Titoli diretti",                    color: "#cbd5e1" },
+  { id: "thematic", name: "Tematici",        sub: "ETF tematici e settoriali",         color: "#d55181" },
+  { id: "commod",   name: "Materie Prime",   sub: "Oro fisico (ETC)",                  color: "#c98500" },
+];
+const TYPE_LABEL = { ETF: "ETF ad accumulazione", ETC: "ETC su materia prima", STOCK: "Azione" };
+
+/* ---------- formattazione ---------- */
+const EUR = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const NUM = (d) => new Intl.NumberFormat("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtEur = (v) => EUR.format(v);
+const fmtSigned = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + EUR.format(Math.abs(v));
+const fmtPct = (p, d = 1) => (p > 0 ? "+" : p < 0 ? "−" : "") + NUM(d).format(Math.abs(p * 100)) + " %";
+const fmtWeight = (w) => NUM(w < 0.01 ? 2 : 1).format(w * 100) + " %";
+const fmtDate = (s) => new Date(s + "T12:00:00Z").toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+
+/* ---------- scala divergente della performance ----------
+   grigio neutro a 0 %, verso verde→ciano se positivo, arancio→rosso se negativo.
+   Saturazione piena a ±30 %: oltre si "clampa" (gli outlier non sballano la scala). */
+const PERF_CAP = 0.30;
+const hex2rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgb2hex = (c) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+const mix = (a, b, t) => rgb2hex(hex2rgb(a).map((v, i) => v + (hex2rgb(b)[i] - v) * t));
+const NEUTRAL = "#7b8494";
+function perfColor(p) {
+  const m = Math.min(Math.abs(p) / PERF_CAP, 1);
+  const [mid, end] = p >= 0 ? ["#34d399", "#22d3ee"] : ["#fb923c", "#ef4444"];
+  return m < 0.5 ? mix(NEUTRAL, mid, m / 0.5) : mix(mid, end, (m - 0.5) / 0.5);
+}
+
+/* ---------- arricchimento dati ---------- */
+const SUM = PORTFOLIO.assets.reduce((s, a) => s + a.value, 0);
+const ASSETS = PORTFOLIO.assets.map((a, i) => {
+  const pnl = a.value - a.cost;
+  return {
+    ...a, pnl, pct: pnl / a.cost, weight: a.value / SUM, rank: i + 1,
+    divTotal: a.dividends.reduce((s, d) => s + d[1], 0),
+  };
+});
+const TOTAL_COST = ASSETS.reduce((s, a) => s + a.cost, 0);
+const TOTAL_PNL = SUM - TOTAL_COST;
+const TOTAL_DIV = ASSETS.reduce((s, a) => s + a.divTotal, 0);
+
+/* ---------- hash deterministico per fasi orbitali ---------- */
+const hash = (s) => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return (h >>> 0) / 4294967295; };
+
+/* =====================================================================
+   LAYOUT DEL COSMO (coordinate "mondo")
+   Dimensione pianeta: AREA proporzionale al peso (raggio ∝ √peso),
+   con raggio minimo per restare visibile/cliccabile e massimo fissato
+   sul pianeta più pesante. I pianeti al minimo sono marcati.
+   ===================================================================== */
+const R_MAX = 72, R_MIN = 6;
+function buildCosmos(portrait) {
+  const wMax = Math.max(...ASSETS.map((a) => a.weight));
+  const sysWeights = SYSTEMS.map((s) => ASSETS.filter((a) => a.system === s.id).reduce((t, a) => t + a.weight, 0));
+  const sysWMax = Math.max(...sysWeights);
+  const divMax = Math.max(...ASSETS.flatMap((a) => a.dividends.map((d) => d[1])), 0.01);
+
+  const systems = SYSTEMS.map((s, si) => {
+    const list = ASSETS.filter((a) => a.system === s.id).sort((a, b) => a.weight - b.weight);
+    const weight = sysWeights[si];
+    const value = list.reduce((t, a) => t + a.value, 0);
+    const cost = list.reduce((t, a) => t + a.cost, 0);
+    const sunR = 18 + 30 * Math.sqrt(weight / sysWMax);
+    let orbit = sunR + 34, prevR = 0, prevMoon = 0;
+    const planets = list.map((a, i) => {
+      const rawR = R_MAX * Math.sqrt(a.weight / wMax);
+      const r = Math.max(R_MIN, rawR);
+      const moonSpan = a.dividends.length ? 10 + a.dividends.length * 5 : 0;
+      orbit += i === 0 ? r + moonSpan : prevR + prevMoon + r + moonSpan + 24;
+      prevR = r; prevMoon = moonSpan;
+      const moons = a.dividends.map((d, k) => ({
+        date: d[0], amount: d[1],
+        orbit: r + 8 + k * 5,
+        rad: 0.9 + 1.7 * Math.sqrt(d[1] / divMax),
+        period: 5 + k * 2.2,
+        phase: hash(a.isin + k) * Math.PI * 2,
+      }));
+      return {
+        asset: a, sysId: s.id, r, floored: rawR < R_MIN, orbit,
+        theta0: hash(a.isin) * Math.PI * 2,
+        period: 26 * Math.pow(orbit / 140, 1.5),
+        color: perfColor(a.pct), moons, moonSpan,
+      };
+    });
+    const ext = (planets.length ? orbit + prevR + prevMoon : sunR) + 36;
+    return { ...s, planets, weight, value, cost, pnl: value - cost, sunR, ext, cx: 0, cy: 0 };
+  });
+
+  // posizionamento: Core al centro, gli altri intorno su angoli fissi
+  const core = systems[0];
+  const angles = portrait ? { em: -90, stocks: 90, thematic: 150, commod: -150 } : { em: -18, stocks: 42, thematic: 150, commod: 212 };
+  systems.slice(1).forEach((s) => {
+    const a = (angles[s.id] * Math.PI) / 180;
+    const d = core.ext + s.ext + (portrait ? 70 : 110);
+    s.cx = Math.cos(a) * d; s.cy = Math.sin(a) * d;
+  });
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  systems.forEach((s) => {
+    minX = Math.min(minX, s.cx - s.ext); maxX = Math.max(maxX, s.cx + s.ext);
+    minY = Math.min(minY, s.cy - s.ext); maxY = Math.max(maxY, s.cy + s.ext);
+  });
+  const pad = portrait ? 150 : 110;
+  const bounds = { x: minX - pad, y: minY - pad, w: maxX - minX + 2 * pad, h: maxY - minY + 2 * pad };
+  const planetIndex = {};
+  systems.forEach((s) => s.planets.forEach((p) => { planetIndex[p.asset.isin] = { p, s }; }));
+  return { systems, bounds, planetIndex };
+}
+// due layout: orizzontale (desktop/landscape) e verticale (smartphone in portrait)
+const LAYOUTS = { land: buildCosmos(false), port: buildCosmos(true) };
+let COSMOS = LAYOUTS.land;
+let SYS_BY_ID = Object.fromEntries(COSMOS.systems.map((s) => [s.id, s]));
+function useLayout(portrait) {
+  const next = portrait ? LAYOUTS.port : LAYOUTS.land;
+  if (next !== COSMOS) { COSMOS = next; SYS_BY_ID = Object.fromEntries(COSMOS.systems.map((s) => [s.id, s])); }
+}
+
+const planetPos = (p, s, t) => {
+  const th = p.theta0 + (2 * Math.PI * t) / p.period;
+  return [s.cx + Math.cos(th) * p.orbit, s.cy + Math.sin(th) * p.orbit];
+};
+
+/* =====================================================================
+   SFONDO STELLARE (Canvas) con parallasse sulla camera
+   ===================================================================== */
+function mulberry32(a) {
+  return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function makeStars(n) {
+  const rnd = mulberry32(20261118);
+  return Array.from({ length: n }, () => ({
+    x: rnd(), y: rnd(), z: 0.15 + rnd() * 0.85, tw: rnd() * Math.PI * 2, hue: rnd(),
+  }));
+}
+const STARS = makeStars(420);
+function drawStars(ctx, W, H, cam, t, dpr) {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  const zoom = COSMOS.bounds.w / cam.w;
+  for (const s of STARS) {
+    const par = s.z * 0.18;
+    let x = (s.x * W * 1.4 - cam.x * par * (W / cam.w) * 0.25) % (W * 1.4);
+    let y = (s.y * H * 1.4 - cam.y * par * (H / cam.h) * 0.25) % (H * 1.4);
+    if (x < 0) x += W * 1.4; if (y < 0) y += H * 1.4;
+    x -= W * 0.2; y -= H * 0.2;
+    const tw = 0.55 + 0.45 * Math.sin(t * (0.6 + s.z) + s.tw);
+    const r = (0.35 + s.z * 1.1) * Math.min(1.6, 0.85 + Math.log2(zoom + 1) * 0.12);
+    ctx.globalAlpha = (0.25 + s.z * 0.6) * tw;
+    ctx.fillStyle = s.hue < 0.7 ? "#e0f2fe" : s.hue < 0.85 ? "#c4b5fd" : "#fde68a";
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* =====================================================================
+   RAZZO (SVG) — disegnato puntando verso l'alto, ~24 unità di altezza
+   ===================================================================== */
+function Rocket({ x, y, angle, scale, thrust, t }) {
+  const flame = 4 + thrust * 12 + Math.sin(t * 40) * 1.2;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${(angle * 180) / Math.PI + 90}) scale(${scale})`} style={{ pointerEvents: "none" }}>
+      <ellipse cx="0" cy="0" rx="16" ry="16" fill="url(#rocketHalo)" />
+      <path d={`M-3.2,6.5 Q0,${6.5 + flame * 1.25} 3.2,6.5 Z`} fill="#fb923c" opacity="0.9" />
+      <path d={`M-1.8,6.5 Q0,${6.5 + flame * 0.8} 1.8,6.5 Z`} fill="#fef08a" />
+      <path d="M-5,2 L-9.5,9.5 L-5,7.2 Z" fill="#22d3ee" />
+      <path d="M5,2 L9.5,9.5 L5,7.2 Z" fill="#22d3ee" />
+      <path d="M0,-13 C5.5,-8.5 6.2,-1 5,7 L-5,7 C-6.2,-1 -5.5,-8.5 0,-13 Z" fill="#e2e8f0" stroke="#67e8f9" strokeWidth="0.8" />
+      <path d="M0,-13 C2.6,-11 3.8,-9 4.4,-7 L-4.4,-7 C-3.8,-9 -2.6,-11 0,-13 Z" fill="#f43f5e" />
+      <circle cx="0" cy="-2" r="2.3" fill="#0e7490" stroke="#a5f3fc" strokeWidth="0.8" />
+      <rect x="-0.6" y="1.5" width="1.2" height="5.5" fill="#94a3b8" />
+    </g>
+  );
+}
+
+/* =====================================================================
+   APP
+   ===================================================================== */
+function App() {
+  const wrapRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [size, setSize] = useState({ W: 1200, H: 800, hudH: 160 });
+  const hudRef = useRef(null);
+  const [view, setView] = useState({ mode: "galaxy", sysId: null, isin: null });
+  const [arrived, setArrived] = useState(false);
+  const [hover, setHover] = useState(null);
+  const [showList, setShowList] = useState(false);
+  const [, setFrame] = useState(0);
+  const reduced = useMemo(() => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches, []);
+
+  const isDesktop = size.W >= 900;
+  useLayout(size.H > size.W * 1.15);
+  const PANEL_W = 400;
+
+  const sim = useRef({
+    cam: { x: COSMOS.bounds.x, y: COSMOS.bounds.y, w: COSMOS.bounds.w, h: COSMOS.bounds.h },
+    rocket: { x: COSMOS.bounds.x + COSMOS.bounds.w / 2, y: COSMOS.bounds.y + COSMOS.bounds.h + 200, vx: 0, vy: 0, angle: -Math.PI / 2, orbitPh: 0, thrust: 0 },
+    orbitT: 0, realT: 0, last: 0,
+  });
+  const viewRef = useRef(view); viewRef.current = view;
+  const arrivedRef = useRef(arrived); arrivedRef.current = arrived;
+  const sizeRef = useRef(size); sizeRef.current = size;
+
+  /* resize */
+  useEffect(() => {
+    const ro = new ResizeObserver(([e]) => {
+      const { width, height } = e.contentRect;
+      useLayout(height > width * 1.15);
+      setSize((s) => ({ ...s, W: Math.max(320, width), H: Math.max(320, height) }));
+    });
+    ro.observe(wrapRef.current);
+    const ro2 = new ResizeObserver(() => {
+      const el = hudRef.current; if (!el) return;
+      const r = el.getBoundingClientRect();
+      setSize((s) => (Math.abs(s.hudH - r.bottom) > 1 ? { ...s, hudH: r.bottom } : s));
+    });
+    if (hudRef.current) ro2.observe(hudRef.current);
+    return () => { ro.disconnect(); ro2.disconnect(); };
+  }, []);
+
+  /* bersagli camera e razzo per la vista corrente */
+  const targets = useCallback((st) => {
+    const v = viewRef.current;
+    const { W, H, hudH } = sizeRef.current;
+    const desk = W >= 900;
+    const top = hudH + 8;
+    // fitBand: porta un quadrato di lato `size` (mondo) al centro della banda schermo libera
+    const fitBand = (cx, cy, size, l, tp, r, b) => {
+      const bw = Math.max(80, r - l), bh = Math.max(80, b - tp);
+      const upp = Math.max(size / bw, size / bh);
+      return { x: cx - ((l + r) / 2) * upp, y: cy - ((tp + b) / 2) * upp, w: W * upp, h: H * upp, upp };
+    };
+    const B = COSMOS.bounds;
+    if (v.mode === "galaxy") {
+      const bw = desk ? W - 20 : W - 8, bh = H - top - 10;
+      const upp = Math.max(B.w / bw, B.h / bh);
+      const cam = { x: B.x + B.w / 2 - (W / 2) * upp, y: B.y + B.h / 2 - (top + bh / 2) * upp, w: W * upp, h: H * upp, upp };
+      const ph = st.realT * 0.6;
+      return { cam, rocket: [B.x + B.w * 0.5 + Math.cos(ph) * 14 * upp, B.y + B.h - 34 * upp + Math.sin(ph * 1.3) * 8 * upp], orbitCenter: null };
+    }
+    const s = SYS_BY_ID[v.sysId];
+    if (v.mode === "system") {
+      const cam = desk ? fitBand(s.cx, s.cy, s.ext * 2.02, 10, top, W - 344, H - 10)
+                       : fitBand(s.cx, s.cy, s.ext * 2.02, 4, top, W - 4, H * 0.56 - 6);
+      const rr = s.sunR + 26 * cam.upp;
+      return { cam, rocket: [s.cx + Math.cos(st.rocket.orbitPh) * rr, s.cy + Math.sin(st.rocket.orbitPh) * rr], orbitCenter: [s.cx, s.cy], orbitR: rr };
+    }
+    const { p } = COSMOS.planetIndex[v.isin];
+    const [px, py] = planetPos(p, s, st.orbitT);
+    const box = Math.max((p.r + p.moonSpan) * 6, 160);
+    const cam = desk ? fitBand(px, py, box, 10, top, W - PANEL_W - 24, H - 10)
+                     : fitBand(px, py, box, 4, top, W - 4, H * 0.5 - 6);
+    const rr = p.r + p.moonSpan + 12 * cam.upp;
+    return { cam, rocket: [px + Math.cos(st.rocket.orbitPh) * rr, py + Math.sin(st.rocket.orbitPh) * rr], orbitCenter: [px, py], orbitR: rr };
+  }, []);
+
+  /* loop principale */
+  useEffect(() => {
+    let raf;
+    const step = (ts) => {
+      const st = sim.current;
+      const dt = st.last ? Math.min((ts - st.last) / 1000, 0.05) : 0.016;
+      st.last = ts;
+      st.realT += dt;
+      const v = viewRef.current;
+      if (v.mode !== "planet" && !reduced) st.orbitT += dt;
+
+      const R = st.rocket;
+      const tg = targets(st);
+      // camera: interpolazione esponenziale (zoom in spazio logaritmico)
+      const k = 1 - Math.exp(-dt * (reduced ? 12 : 2.6));
+      const c = st.cam;
+      const cxNow = c.x + c.w / 2, cyNow = c.y + c.h / 2;
+      const cxT = tg.cam.x + tg.cam.w / 2, cyT = tg.cam.y + tg.cam.h / 2;
+      const lw = Math.log(c.w) + (Math.log(tg.cam.w) - Math.log(c.w)) * k;
+      const nw = Math.exp(lw), nh = nw * (tg.cam.h / tg.cam.w);
+      const ncx = cxNow + (cxT - cxNow) * k, ncy = cyNow + (cyT - cyNow) * k;
+      st.cam = { x: ncx - nw / 2, y: ncy - nh / 2, w: nw, h: nh };
+
+      // razzo: molla smorzata verso il bersaglio
+      const omega = v.mode === "planet" ? 1.1 : 0.45;
+      R.orbitPh += dt * omega;
+      const K = reduced ? 60 : 7.5, C = 2 * Math.sqrt(K) * 0.92;
+      // velocità del bersaglio (per orbitare senza ritardo); ignora i salti di cambio vista
+      let tvx = 0, tvy = 0;
+      if (st.prevTg && dt > 0) {
+        const jx = tg.rocket[0] - st.prevTg[0], jy = tg.rocket[1] - st.prevTg[1];
+        if (Math.hypot(jx, jy) / (st.cam.w / sizeRef.current.W) < 40) { tvx = jx / dt; tvy = jy / dt; }
+      }
+      st.prevTg = tg.rocket;
+      const ax = K * (tg.rocket[0] - R.x) + C * (tvx - R.vx);
+      const ay = K * (tg.rocket[1] - R.y) + C * (tvy - R.vy);
+      R.vx += ax * dt; R.vy += ay * dt;
+      R.x += R.vx * dt; R.y += R.vy * dt;
+      const upp = st.cam.w / sizeRef.current.W;
+      const speedPx = Math.hypot(R.vx, R.vy) / upp;
+      R.thrust += (Math.min(speedPx / 600, 1) - R.thrust) * Math.min(1, dt * 6);
+      let heading;
+      const relPx = Math.hypot(R.vx - tvx, R.vy - tvy) / upp;
+      if (relPx > 120 || !tg.orbitCenter) heading = Math.atan2(R.vy, R.vx);
+      else heading = Math.atan2(R.y - tg.orbitCenter[1], R.x - tg.orbitCenter[0]) + Math.PI / 2;
+      if (speedPx > 4 || tg.orbitCenter) {
+        let d = heading - R.angle;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        R.angle += d * Math.min(1, dt * 7);
+      }
+      // atterraggio / ingresso in orbita
+      if (v.mode === "planet" && !arrivedRef.current) {
+        const radial = Math.abs(Math.hypot(R.x - tg.orbitCenter[0], R.y - tg.orbitCenter[1]) - tg.orbitR) / upp;
+        const camErr = Math.abs(Math.log(st.cam.w / tg.cam.w));
+        if (radial < 30 && camErr < 0.15) setArrived(true);
+      }
+
+      // stelle
+      const cv = canvasRef.current;
+      if (cv) {
+        const dpr = window.devicePixelRatio || 1;
+        const { W, H } = sizeRef.current;
+        if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+        drawStars(cv.getContext("2d"), W, H, st.cam, st.realT, dpr);
+      }
+      setFrame((f) => (f + 1) % 1e6);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [targets, reduced]);
+
+  /* navigazione */
+  const goGalaxy = useCallback(() => { setView({ mode: "galaxy", sysId: null, isin: null }); setArrived(false); setHover(null); }, []);
+  const goSystem = useCallback((id) => { setView({ mode: "system", sysId: id, isin: null }); setArrived(false); setHover(null); }, []);
+  const goPlanet = useCallback((isin) => {
+    const { s } = COSMOS.planetIndex[isin];
+    setView({ mode: "planet", sysId: s.id, isin }); setArrived(false); setHover(null); setShowList(false);
+  }, []);
+  const goBack = useCallback(() => {
+    const v = viewRef.current;
+    if (v.mode === "planet") goSystem(v.sysId); else if (v.mode === "system") goGalaxy();
+  }, [goSystem, goGalaxy]);
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { if (showList) setShowList(false); else goBack(); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [goBack, showList]);
+
+  /* render */
+  const st = sim.current;
+  const cam = st.cam;
+  const upp = cam.w / size.W;
+  const t = st.orbitT, rt = st.realT;
+  const curSys = view.sysId ? SYS_BY_ID[view.sysId] : null;
+  const curPlanet = view.isin ? COSMOS.planetIndex[view.isin].p : null;
+
+  const hoverAt = (e, payload) => {
+    const r = wrapRef.current.getBoundingClientRect();
+    setHover({ ...payload, x: e.clientX - r.left, y: e.clientY - r.top });
+  };
+
+  return (
+    <div className="space-bg fixed inset-0 select-none">
+      <div ref={wrapRef} className="absolute inset-0">
+        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ width: size.W, height: size.H }} />
+        <svg className="absolute inset-0 w-full h-full" viewBox={`${cam.x} ${cam.y} ${cam.w} ${cam.h}`} preserveAspectRatio="xMidYMid meet"
+             aria-label="Mappa galattica del portafoglio">
+          <defs>
+            <radialGradient id="rocketHalo"><stop offset="0" stopColor="#67e8f9" stopOpacity=".28" /><stop offset="1" stopColor="#67e8f9" stopOpacity="0" /></radialGradient>
+            {COSMOS.systems.map((s) => (
+              <React.Fragment key={s.id}>
+                <radialGradient id={`sun-${s.id}`} cx="40%" cy="38%">
+                  <stop offset="0" stopColor="#ffffff" />
+                  <stop offset=".35" stopColor={mix(s.color, "#ffffff", 0.45)} />
+                  <stop offset="1" stopColor={s.color} />
+                </radialGradient>
+                <radialGradient id={`corona-${s.id}`}>
+                  <stop offset=".45" stopColor={s.color} stopOpacity=".55" />
+                  <stop offset=".7" stopColor={s.color} stopOpacity=".16" />
+                  <stop offset="1" stopColor={s.color} stopOpacity="0" />
+                </radialGradient>
+                <radialGradient id={`neb-${s.id}`}>
+                  <stop offset="0" stopColor={s.color} stopOpacity=".10" />
+                  <stop offset="1" stopColor={s.color} stopOpacity="0" />
+                </radialGradient>
+              </React.Fragment>
+            ))}
+            {ASSETS.map((a) => {
+              const col = perfColor(a.pct);
+              return (
+                <React.Fragment key={a.isin}>
+                  <radialGradient id={`pl-${a.isin}`} cx="35%" cy="32%" r="75%">
+                    <stop offset="0" stopColor={mix(col, "#ffffff", 0.55)} />
+                    <stop offset=".45" stopColor={col} />
+                    <stop offset="1" stopColor={mix(col, "#020617", 0.72)} />
+                  </radialGradient>
+                  <radialGradient id={`au-${a.isin}`}>
+                    <stop offset=".5" stopColor={col} stopOpacity=".6" />
+                    <stop offset=".72" stopColor={col} stopOpacity=".18" />
+                    <stop offset="1" stopColor={col} stopOpacity="0" />
+                  </radialGradient>
+                </React.Fragment>
+              );
+            })}
+          </defs>
+
+          {/* ---------- sistemi solari ---------- */}
+          {COSMOS.systems.map((s) => {
+            const isCur = curSys && curSys.id === s.id;
+            const dim = curSys && !isCur ? 0.35 : 1;
+            const clickable = !isCur;
+            // etichetta tenuta dentro lo schermo sui display stretti
+            const half = 130 * upp;
+            const lx = Math.min(Math.max(s.cx, cam.x + half), cam.x + cam.w - half);
+            return (
+              <g key={s.id} opacity={dim} style={{ transition: "opacity .6s" }}>
+                <circle cx={s.cx} cy={s.cy} r={s.ext} fill={`url(#neb-${s.id})`}
+                        style={{ cursor: clickable ? "pointer" : "default", pointerEvents: clickable ? "all" : "none" }}
+                        role="button" tabIndex={clickable ? 0 : -1}
+                        aria-label={`Sistema ${s.name}: ${fmtEur(s.value)}, ${fmtWeight(s.weight)} del portafoglio`}
+                        onClick={() => goSystem(s.id)}
+                        onKeyDown={(e) => e.key === "Enter" && goSystem(s.id)}
+                        onPointerMove={(e) => view.mode === "galaxy" && hoverAt(e, { kind: "sys", id: s.id })}
+                        onPointerLeave={() => setHover(null)} />
+                {s.planets.map((p) => (
+                  <circle key={p.asset.isin} cx={s.cx} cy={s.cy} r={p.orbit} fill="none"
+                          stroke={isCur ? "rgba(125,211,252,.22)" : "rgba(148,163,184,.12)"}
+                          strokeWidth={1 * upp} strokeDasharray={isCur ? `${4 * upp} ${5 * upp}` : "none"} style={{ pointerEvents: "none" }} />
+                ))}
+                <circle cx={s.cx} cy={s.cy} r={s.sunR * 2.6} fill={`url(#corona-${s.id})`} className="aura" style={{ pointerEvents: "none" }} />
+                <circle cx={s.cx} cy={s.cy} r={s.sunR} fill={`url(#sun-${s.id})`} style={{ pointerEvents: "none" }} />
+                {/* etichetta sistema */}
+                {(!curSys || !isCur) && (
+                  <g style={{ pointerEvents: "none" }}>
+                    <text x={lx} y={s.cy + s.ext + 6 * upp} textAnchor="middle" dominantBaseline="hanging"
+                          fontFamily="Orbitron, sans-serif" fontWeight="700" fontSize={13 * upp} fill="#e0f2fe" letterSpacing={2 * upp}>
+                      {s.name.toUpperCase()}
+                    </text>
+                    <text x={lx} y={s.cy + s.ext + 24 * upp} textAnchor="middle" dominantBaseline="hanging"
+                          fontFamily="JetBrains Mono, monospace" fontSize={11.5 * upp} fill="#94a3b8">
+                      {fmtEur(s.value)} · {fmtWeight(s.weight)} · {s.planets.length} {s.planets.length === 1 ? "pianeta" : "pianeti"}
+                    </text>
+                  </g>
+                )}
+              </g>
+            );
+          })}
+
+          {/* ---------- pianeti ---------- */}
+          {COSMOS.systems.map((s) => s.planets.map((p) => {
+            const a = p.asset;
+            const [x, y] = planetPos(p, s, t);
+            const isCurSys = curSys && curSys.id === s.id;
+            const isSel = view.isin === a.isin;
+            const interactive = view.mode !== "galaxy" && isCurSys;
+            const hitR = Math.max(p.r, 14 * upp);
+            const showLabel = isCurSys;
+            return (
+              <g key={a.isin} opacity={curSys && !isCurSys ? 0.35 : 1}>
+                <circle cx={x} cy={y} r={p.r * 2.1} fill={`url(#au-${a.isin})`} className="aura" style={{ pointerEvents: "none" }} />
+                <circle cx={x} cy={y} r={p.r} fill={`url(#pl-${a.isin})`} style={{ pointerEvents: "none" }} />
+                {p.floored && isCurSys && (
+                  <circle cx={x} cy={y} r={p.r + 3.5 * upp} fill="none" stroke="#94a3b8" strokeWidth={1 * upp}
+                          strokeDasharray={`${2 * upp} ${2.5 * upp}`} style={{ pointerEvents: "none" }} />
+                )}
+                {isSel && (
+                  <circle cx={x} cy={y} r={p.r + p.moonSpan + 6 * upp} fill="none" stroke="#67e8f9" strokeWidth={1.4 * upp}
+                          strokeDasharray={`${6 * upp} ${4 * upp}`} transform={`rotate(${rt * 30} ${x} ${y})`} style={{ pointerEvents: "none" }} />
+                )}
+                {/* lune = dividendi incassati */}
+                {p.moons.map((m, k) => {
+                  const th = m.phase + (2 * Math.PI * rt) / m.period * (reduced ? 0 : 1);
+                  return (
+                    <g key={k} style={{ pointerEvents: "none" }}>
+                      {isCurSys && <circle cx={x} cy={y} r={m.orbit} fill="none" stroke="rgba(226,232,240,.12)" strokeWidth={0.6 * upp} />}
+                      <circle cx={x + Math.cos(th) * m.orbit} cy={y + Math.sin(th) * m.orbit} r={Math.max(m.rad, 1.3 * upp)} fill="#e2e8f0" />
+                    </g>
+                  );
+                })}
+                {showLabel && (
+                  <text x={x} y={y - p.r - (p.moonSpan ? p.moonSpan : 0) - 7 * upp} textAnchor="middle"
+                        fontFamily="Orbitron, sans-serif" fontWeight="700" fontSize={11 * upp} fill={isSel ? "#a5f3fc" : "#e2e8f0"}
+                        letterSpacing={1 * upp} style={{ pointerEvents: "none" }}>
+                    {a.code}
+                  </text>
+                )}
+                <circle cx={x} cy={y} r={hitR} fill="transparent"
+                        style={{ cursor: interactive ? "pointer" : "default", pointerEvents: interactive ? "all" : "none" }}
+                        role="button" tabIndex={interactive ? 0 : -1}
+                        aria-label={`${a.name}: ${fmtEur(a.value)}, rendimento ${fmtPct(a.pct)}`}
+                        onClick={() => goPlanet(a.isin)}
+                        onKeyDown={(e) => e.key === "Enter" && goPlanet(a.isin)}
+                        onPointerMove={(e) => hoverAt(e, { kind: "planet", isin: a.isin })}
+                        onPointerLeave={() => setHover(null)} />
+              </g>
+            );
+          }))}
+
+          <Rocket x={st.rocket.x} y={st.rocket.y} angle={st.rocket.angle} scale={1.15 * upp} thrust={st.rocket.thrust} t={rt} />
+        </svg>
+      </div>
+
+      {/* ================= HUD SUPERIORE ================= */}
+      <TopHud hudRef={hudRef} view={view} curSys={curSys} curPlanet={curPlanet} goGalaxy={goGalaxy} goSystem={goSystem}
+              showList={showList} setShowList={setShowList} />
+
+      {/* ================= TOOLTIP ================= */}
+      {hover && <Tooltip hover={hover} W={size.W} />}
+
+      {/* ================= PANNELLI ================= */}
+      {view.mode === "galaxy" && <GalaxyHint />}
+      {view.mode === "system" && curSys && <SystemPanel s={curSys} goPlanet={goPlanet} isDesktop={isDesktop} hudTop={size.hudH + 8} />}
+      {view.mode === "planet" && !arrived && <ApproachToast a={curPlanet.asset} />}
+      {view.mode === "planet" && arrived && (
+        <PlanetHud key={view.isin} p={curPlanet} s={curSys} goSystem={goSystem} goPlanet={goPlanet} isDesktop={isDesktop} width={PANEL_W} hudTop={size.hudH + 8} />
+      )}
+
+      <Legend compact={!isDesktop} hidden={!isDesktop && view.mode === "planet"} />
+      {showList && <AssetList onClose={() => setShowList(false)} goPlanet={goPlanet} />}
+    </div>
+  );
+}
+
+/* =====================================================================
+   COMPONENTI HUD
+   ===================================================================== */
+function Signed({ v, children, className = "" }) {
+  const col = v > 0 ? "#5eead4" : v < 0 ? "#fb923c" : "#cbd5e1";
+  return <span className={className} style={{ color: col }}>{v > 0 ? "▲ " : v < 0 ? "▼ " : ""}{children}</span>;
+}
+
+function TopHud({ hudRef, view, curSys, curPlanet, goGalaxy, goSystem, showList, setShowList }) {
+  const ts = new Date(PORTFOLIO.valuationUtc);
+  return (
+    <div ref={hudRef} className="absolute z-30 top-0 inset-x-0 p-2 sm:p-3 pointer-events-none">
+      <div className="relative glass hud-corners scan rounded-md px-3 sm:px-5 py-2 sm:py-3 pointer-events-auto flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="min-w-0">
+          <div className="font-display text-[10px] sm:text-[11px] tracking-[.35em] text-cyan-300/80">UNIVERSO · PATRIMONIO TOTALE</div>
+          <div className="font-display font-black text-2xl sm:text-4xl text-cyan-50 neon leading-tight">{fmtEur(PORTFOLIO.total)}</div>
+          <div className="text-[10px] sm:text-[11px] text-slate-400">
+            Valutazione {ts.toLocaleDateString("it-IT")} {ts.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC · 22 pianeti · 5 sistemi
+          </div>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] tracking-widest text-slate-400">PLUS/MINUS NON REALIZZATA</span>
+          <Signed v={TOTAL_PNL} className="font-display font-bold text-lg sm:text-xl">
+            {fmtSigned(TOTAL_PNL)} <span className="text-sm">({fmtPct(TOTAL_PNL / TOTAL_COST)})</span>
+          </Signed>
+          <span className="hidden sm:inline text-[10px] text-slate-500">su costo di carico {fmtEur(TOTAL_COST)}</span>
+        </div>
+        <div className="hidden md:flex gap-2 flex-wrap">
+          {PORTFOLIO.performance.map((p) => (
+            <div key={p.label} className="rounded border border-cyan-400/20 bg-slate-900/40 px-2 py-1">
+              <div className="text-[9.5px] tracking-widest text-slate-400 uppercase">{p.label}</div>
+              <Signed v={p.value} className="text-xs font-bold">{fmtSigned(p.value)}</Signed>
+            </div>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button className="btn-hud rounded px-3 py-1.5 text-[11px] sm:text-xs font-display tracking-widest" onClick={() => setShowList(!showList)}
+                  aria-pressed={showList}>
+            ☰ ELENCO
+          </button>
+          {view.mode !== "galaxy" && (
+            <button className="btn-hud rounded px-3 py-1.5 text-[11px] sm:text-xs font-display tracking-widest" onClick={goGalaxy}>
+              ⟲ TORNA ALLA GALASSIA
+            </button>
+          )}
+        </div>
+      </div>
+      {/* breadcrumb */}
+      <nav className="mt-2 inline-flex items-center gap-2 text-[11px] font-display tracking-widest pointer-events-auto glass rounded px-3 py-1" aria-label="Posizione">
+        <button className={view.mode === "galaxy" ? "text-cyan-200" : "text-slate-400 hover:text-cyan-200"} onClick={goGalaxy}>GALASSIA</button>
+        {curSys && <>
+          <span className="text-slate-600">›</span>
+          <button className={view.mode === "system" ? "text-cyan-200" : "text-slate-400 hover:text-cyan-200"} onClick={() => goSystem(curSys.id)}>
+            {curSys.name.toUpperCase()}
+          </button>
+        </>}
+        {curPlanet && <>
+          <span className="text-slate-600">›</span>
+          <span className="text-cyan-200">{curPlanet.asset.code}</span>
+        </>}
+      </nav>
+    </div>
+  );
+}
+
+function Tooltip({ hover, W }) {
+  let title, lines;
+  if (hover.kind === "sys") {
+    const s = SYS_BY_ID[hover.id];
+    title = `Sistema ${s.name}`;
+    lines = [
+      ["Controvalore", fmtEur(s.value)],
+      ["Quota", fmtWeight(s.weight)],
+      ["Rendimento", <Signed v={s.pnl}>{fmtSigned(s.pnl)} ({fmtPct(s.pnl / s.cost)})</Signed>],
+    ];
+  } else {
+    const a = COSMOS.planetIndex[hover.isin].p.asset;
+    title = `${a.code} · ${a.name}`;
+    lines = [
+      ["Controvalore", fmtEur(a.value)],
+      ["Quota", fmtWeight(a.weight)],
+      ["Rendimento", <Signed v={a.pnl}>{fmtPct(a.pct)}</Signed>],
+    ];
+  }
+  const left = Math.min(hover.x + 16, W - 260);
+  return (
+    <div className="absolute z-30 glass rounded px-3 py-2 text-xs pointer-events-none w-60" style={{ left, top: hover.y + 16 }}>
+      <div className="font-display text-[11px] text-cyan-200 mb-1 truncate">{title}</div>
+      {lines.map(([k, v]) => (
+        <div key={k} className="flex justify-between gap-3"><span className="text-slate-400">{k}</span><span className="text-slate-100">{v}</span></div>
+      ))}
+      <div className="text-[10px] text-slate-500 mt-1">Clic per navigare</div>
+    </div>
+  );
+}
+
+function GalaxyHint() {
+  return (
+    <div className="absolute bottom-3 right-3 glass rounded px-3 py-2 text-[11px] text-slate-300 max-w-[18rem] hidden sm:block">
+      <span className="text-cyan-300 font-display tracking-widest">ROTTA › </span>
+      Seleziona un sistema solare per far partire il razzo. <span className="text-slate-500">Esc = indietro.</span>
+    </div>
+  );
+}
+
+function SystemPanel({ s, goPlanet, isDesktop, hudTop }) {
+  const list = [...s.planets].sort((a, b) => b.asset.value - a.asset.value);
+  return (
+    <aside className={`absolute z-20 glass hud-corners rounded-md panel-in ${isDesktop ? "right-3 w-80" : "inset-x-2 bottom-2 max-h-[44vh] flex flex-col"} p-4`}
+           style={isDesktop ? { top: hudTop } : undefined}
+           aria-label={`Sistema ${s.name}`}>
+      <div className="font-display text-[10px] tracking-[.3em] text-cyan-300/80">SISTEMA SOLARE</div>
+      <div className="font-display font-bold text-xl text-cyan-50 neon">{s.name}</div>
+      <div className="text-[11px] text-slate-400 mb-3">{s.sub}</div>
+      <div className="grid grid-cols-3 gap-2 text-center mb-3">
+        <Stat k="Valore" v={fmtEur(s.value)} />
+        <Stat k="Quota" v={fmtWeight(s.weight)} />
+        <Stat k="Rend." v={<Signed v={s.pnl}>{fmtPct(s.pnl / s.cost)}</Signed>} />
+      </div>
+      <ul className={`space-y-1 thin-scroll overflow-y-auto ${isDesktop ? "max-h-[45vh]" : "min-h-0"}`}>
+        {list.map((p) => (
+          <li key={p.asset.isin}>
+            <button onClick={() => goPlanet(p.asset.isin)}
+                    className="w-full flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-cyan-400/10 border border-transparent hover:border-cyan-400/30">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color, boxShadow: `0 0 8px ${p.color}` }} />
+              <span className="font-display text-[11px] text-cyan-100 w-20 shrink-0">{p.asset.code}</span>
+              <span className="text-slate-300 tabular-nums">{fmtEur(p.asset.value)}</span>
+              <Signed v={p.asset.pnl} className="ml-auto tabular-nums">{fmtPct(p.asset.pct)}</Signed>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
+}
+
+function Stat({ k, v }) {
+  return (
+    <div className="rounded border border-cyan-400/15 bg-slate-950/40 px-1 py-1.5">
+      <div className="text-[9.5px] uppercase tracking-widest text-slate-400">{k}</div>
+      <div className="text-xs font-bold text-slate-100 tabular-nums">{v}</div>
+    </div>
+  );
+}
+
+function ApproachToast({ a }) {
+  return (
+    <div className="absolute z-20 left-1/2 -translate-x-1/2 bottom-6 glass rounded px-4 py-2 font-display text-xs tracking-[.25em] text-cyan-200">
+      ROTTA VERSO {a.code} <span className="blink">▮</span>
+    </div>
+  );
+}
+
+function PlanetHud({ p, s, goSystem, goPlanet, isDesktop, width, hudTop }) {
+  const a = p.asset;
+  const sibs = [...s.planets].sort((x, y) => y.asset.value - x.asset.value);
+  const idx = sibs.findIndex((x) => x.asset.isin === a.isin);
+  const prev = sibs[(idx - 1 + sibs.length) % sibs.length], next = sibs[(idx + 1) % sibs.length];
+  const rows = [
+    ["Controvalore", fmtEur(a.value)],
+    ["Rendimento €", <Signed v={a.pnl}>{fmtSigned(a.pnl)}</Signed>],
+    ["Rendimento %", <Signed v={a.pnl}>{fmtPct(a.pct)}</Signed>],
+    ["Quota portafoglio", `${fmtWeight(a.weight)}  (#${a.rank} di ${ASSETS.length})`],
+    ["Costo di carico", fmtEur(a.cost)],
+    ["Quantità", NUM(a.qty % 1 ? 4 : 0).format(a.qty)],
+    ["Prezzo medio (FIFO)", fmtEur(a.fifo)],
+    ["Prezzo attuale", fmtEur(a.price)],
+  ];
+  return (
+    <aside
+      className={`absolute z-20 glass hud-corners scan rounded-md panel-in flex flex-col ${isDesktop ? "right-3 bottom-3" : "inset-x-2 bottom-2 h-[calc(50vh-4px)]"}`}
+      style={isDesktop ? { width, top: hudTop } : undefined} aria-label={`Dati tecnici ${a.name}`}>
+      <div className="p-4 border-b border-cyan-400/15">
+        <div className="flex items-center justify-between">
+          <div className="font-display text-[10px] tracking-[.3em] text-cyan-300/80">HUD · ORBITA STABILE</div>
+          <button className="btn-hud rounded px-2 py-0.5 text-[10px] font-display tracking-widest" onClick={() => goSystem(s.id)} aria-label="Chiudi e torna al sistema">✕ SISTEMA</button>
+        </div>
+        <div className="flex items-center gap-3 mt-2">
+          <span className="w-9 h-9 rounded-full shrink-0" style={{ background: `radial-gradient(circle at 35% 32%, ${mix(p.color, "#ffffff", .55)}, ${p.color} 45%, ${mix(p.color, "#020617", .72)})`, boxShadow: `0 0 18px ${p.color}` }} />
+          <div className="min-w-0">
+            <div className="font-display font-black text-2xl text-cyan-50 neon leading-none">{a.code}</div>
+            <div className="text-sm text-slate-200 truncate" title={a.name}>{a.name}</div>
+          </div>
+        </div>
+        <div className="mt-2 text-[11px] text-slate-400">ISIN <span className="text-slate-200">{a.isin}</span> · {TYPE_LABEL[a.type]} · {s.name}</div>
+      </div>
+      <div className="p-4 overflow-y-auto thin-scroll grow">
+        <dl className="grid grid-cols-1 gap-y-1.5 text-sm">
+          {rows.map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3 border-b border-dashed border-slate-700/60 pb-1.5">
+              <dt className="text-slate-400 text-xs uppercase tracking-wider self-center">{k}</dt>
+              <dd className="text-slate-50 font-bold tabular-nums text-right">{v}</dd>
+            </div>
+          ))}
+        </dl>
+        <WeightBar w={a.weight} floored={p.floored} />
+        <div className="mt-4">
+          <div className="font-display text-[10px] tracking-[.3em] text-cyan-300/80 mb-1">SATELLITI · DIVIDENDI INCASSATI</div>
+          {a.dividends.length ? (
+            <>
+              <ul className="text-xs space-y-0.5">
+                {a.dividends.map(([d, v]) => (
+                  <li key={d} className="flex justify-between"><span className="text-slate-400">☾ {fmtDate(d)}</span><span className="text-slate-100 tabular-nums">{fmtEur(v)}</span></li>
+                ))}
+              </ul>
+              <div className="flex justify-between text-xs mt-1 pt-1 border-t border-slate-700/60">
+                <span className="text-slate-400">Totale ({a.dividends.length} {a.dividends.length === 1 ? "luna" : "lune"})</span>
+                <span className="text-cyan-100 font-bold">{fmtEur(a.divTotal)}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-slate-400">
+              {a.type === "ETF" ? "ETF ad accumulazione: i dividendi vengono reinvestiti dentro il fondo e sono già nel prezzo. Nessuna luna."
+                : a.type === "ETC" ? "L'oro fisico non distribuisce redditi. Nessuna luna."
+                : "Nessuna distribuzione registrata nel periodo disponibile."}
+            </p>
+          )}
+        </div>
+        <p className="text-[10px] text-slate-500 mt-4 leading-relaxed">
+          Rendimento = plus/minus non realizzata su prezzo medio FIFO. Esclude dividendi incassati e costi già pagati. Sigla breve assegnata per la mappa: l'identificativo univoco è l'ISIN.
+        </p>
+      </div>
+      <div className="p-3 border-t border-cyan-400/15 flex gap-2">
+        <button className="btn-hud rounded px-2 py-1.5 text-[11px] font-display tracking-widest flex-1" onClick={() => goPlanet(prev.asset.isin)}>‹ {prev.asset.code}</button>
+        <button className="btn-hud rounded px-2 py-1.5 text-[11px] font-display tracking-widest flex-1" onClick={() => goPlanet(next.asset.isin)}>{next.asset.code} ›</button>
+      </div>
+    </aside>
+  );
+}
+
+function WeightBar({ w, floored }) {
+  // scala logaritmica 0,01 % → 100 %: rende leggibili anche le posizioni minuscole
+  const pos = (Math.log10(w * 100) + 2) / 4; // -2..2  →  0..1
+  return (
+    <div className="mt-4">
+      <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+        <span className="font-display tracking-[.25em] text-cyan-300/80">PESO (SCALA LOG)</span><span>{fmtWeight(w)}</span>
+      </div>
+      <div className="relative h-2 rounded bg-slate-800/80 overflow-hidden">
+        <div className="absolute inset-y-0 left-0 rounded" style={{ width: `${Math.max(2, pos * 100)}%`, background: "linear-gradient(90deg,#0e7490,#67e8f9)", boxShadow: "0 0 10px #22d3ee" }} />
+      </div>
+      <div className="flex justify-between text-[9px] text-slate-500 mt-0.5"><span>0,01 %</span><span>0,1 %</span><span>1 %</span><span>10 %</span><span>100 %</span></div>
+      {floored && <p className="text-[10px] text-amber-200/80 mt-1">⚠ Pianeta mostrato alla dimensione minima (anello tratteggiato): in proporzione reale sarebbe più piccolo.</p>}
+    </div>
+  );
+}
+
+function Legend({ compact, hidden }) {
+  if (hidden) return null;
+  const stops = [-0.3, -0.15, 0, 0.15, 0.3].map((p) => perfColor(p));
+  return (
+    <div className={`absolute z-10 left-3 bottom-3 glass rounded px-3 py-2 text-[10.5px] text-slate-300 ${compact ? "max-w-[13rem] hidden sm:block" : "w-72"}`}>
+      <div className="font-display tracking-[.25em] text-cyan-300/80 text-[9.5px] mb-1">LEGENDA</div>
+      <div className="mb-1">Colore / aura = rendimento</div>
+      <div className="h-2 rounded" style={{ background: `linear-gradient(90deg, ${stops.join(",")})` }} />
+      <div className="flex justify-between text-[9.5px] text-slate-400 mt-0.5"><span>≤ −30 %</span><span>0</span><span>≥ +30 %</span></div>
+      {!compact && (
+        <ul className="mt-2 space-y-0.5 text-slate-400">
+          <li>● Area pianeta ∝ peso sul portafoglio (√)</li>
+          <li>◌ Anello tratteggiato = dimensione minima</li>
+          <li>☾ Lune = dividendi incassati (1 per stacco)</li>
+          <li>☀ Sole = sistema / categoria, colore = identità</li>
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function AssetList({ onClose, goPlanet }) {
+  return (
+    <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center p-2 sm:p-6" onClick={onClose}>
+      <div className="glass hud-corners rounded-md w-full max-w-4xl max-h-full flex flex-col panel-in" onClick={(e) => e.stopPropagation()}
+           role="dialog" aria-label="Elenco asset">
+        <div className="flex items-center justify-between p-4 border-b border-cyan-400/15">
+          <div>
+            <div className="font-display text-[10px] tracking-[.3em] text-cyan-300/80">REGISTRO DI BORDO</div>
+            <div className="font-display font-bold text-lg text-cyan-50">Tutti gli asset · {ASSETS.length}</div>
+          </div>
+          <button className="btn-hud rounded px-3 py-1 text-xs font-display tracking-widest" onClick={onClose}>✕ CHIUDI</button>
+        </div>
+        <div className="overflow-auto thin-scroll">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-slate-950/95 text-slate-400 uppercase tracking-wider text-[10px]">
+              <tr>
+                <th className="text-left p-2">Sigla</th><th className="text-left p-2">Nome</th><th className="text-left p-2 hidden md:table-cell">Sistema</th>
+                <th className="text-right p-2">Valore</th><th className="text-right p-2">Quota</th>
+                <th className="text-right p-2">Rend. €</th><th className="text-right p-2">Rend. %</th><th className="text-right p-2 hidden sm:table-cell">Div.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ASSETS.map((a) => (
+                <tr key={a.isin} className="border-t border-slate-800 hover:bg-cyan-400/10 cursor-pointer [&>td]:whitespace-nowrap" onClick={() => goPlanet(a.isin)}>
+                  <td className="p-2 font-display text-[11px] text-cyan-100 whitespace-nowrap">
+                    <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ background: perfColor(a.pct) }} />{a.code}
+                  </td>
+                  <td className="p-2 text-slate-300 !whitespace-normal min-w-[12rem]">{a.name}</td>
+                  <td className="p-2 text-slate-400 hidden md:table-cell">{SYS_BY_ID[a.system].name}</td>
+                  <td className="p-2 text-right tabular-nums">{fmtEur(a.value)}</td>
+                  <td className="p-2 text-right tabular-nums">{fmtWeight(a.weight)}</td>
+                  <td className="p-2 text-right tabular-nums"><Signed v={a.pnl}>{fmtSigned(a.pnl)}</Signed></td>
+                  <td className="p-2 text-right tabular-nums"><Signed v={a.pnl}>{fmtPct(a.pct)}</Signed></td>
+                  <td className="p-2 text-right tabular-nums hidden sm:table-cell">{a.divTotal ? fmtEur(a.divTotal) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="text-slate-200 border-t border-cyan-400/30">
+              <tr>
+                <td className="p-2 font-display" colSpan={2}>Totale posizioni</td><td className="hidden md:table-cell" />
+                <td className="p-2 text-right tabular-nums">{fmtEur(SUM)}</td><td className="p-2 text-right">100 %</td>
+                <td className="p-2 text-right tabular-nums"><Signed v={TOTAL_PNL}>{fmtSigned(TOTAL_PNL)}</Signed></td>
+                <td className="p-2 text-right tabular-nums"><Signed v={TOTAL_PNL}>{fmtPct(TOTAL_PNL / TOTAL_COST)}</Signed></td>
+                <td className="p-2 text-right tabular-nums hidden sm:table-cell">{fmtEur(TOTAL_DIV)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p className="p-3 text-[10px] text-slate-500 border-t border-cyan-400/15">
+          Fonte: Scalable Capital (MCP), valutazione {new Date(PORTFOLIO.valuationUtc).toLocaleString("it-IT", { timeZone: "UTC" })} UTC.
+          La somma delle posizioni ({fmtEur(SUM)}) differisce dal totale del broker ({fmtEur(PORTFOLIO.total)}) per arrotondamenti.
+          Liquidità, obbligazioni e crypto: nessuna posizione.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
