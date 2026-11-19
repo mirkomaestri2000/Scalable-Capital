@@ -1,0 +1,4 @@
+node_modules/
+# contiene i valori reali del portafoglio
+dist/
+src/data/portfolio.js
