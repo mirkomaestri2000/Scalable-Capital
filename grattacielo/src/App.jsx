@@ -6,7 +6,7 @@
  * Rendimento = non realizzato, su prezzo medio di carico FIFO (esclude dividendi
  * e plusvalenze già realizzate).
  */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 // I dati reali stanno in ./data/portfolio.js (escluso da git). Senza, il build usa portfolio.example.js.
 import { SNAPSHOT, HOLDINGS, TIER_NOTES } from "./data/portfolio.js";
@@ -189,7 +189,7 @@ function Cracks({ intensity = 1 }) {
   );
 }
 
-function Foundation({ width, height, tier, cracked }) {
+function Foundation({ width, height, tier, cracked, children }) {
   const cols = Math.max(2, Math.floor((width - 24) / 30));
   const neg = tier.ret < 0;
   return (
@@ -208,11 +208,12 @@ function Foundation({ width, height, tier, cracked }) {
         <Windows cols={cols} rows={3} ret={tier.ret} seed={11} w={16} h={11} gapX={14} gapY={18} radius={0} dimColor="#24272c" />
       </div>
       {(neg || cracked) && <Cracks intensity={cracked ? 2 : 1} />}
+      {children}
     </div>
   );
 }
 
-function GlassFloors({ width, height, tier, cracked, reduce }) {
+function GlassFloors({ width, height, tier, cracked, reduce, children }) {
   const cols = Math.max(2, Math.floor((width - 14) / 18));
   const rows = 8;
   const neg = tier.ret < 0;
@@ -241,11 +242,12 @@ function GlassFloors({ width, height, tier, cracked, reduce }) {
         />
       )}
       {(neg || cracked) && <Cracks intensity={cracked ? 2 : 1} />}
+      {children}
     </div>
   );
 }
 
-function Penthouse({ width, height, tier, cracked }) {
+function Penthouse({ width, height, tier, cracked, children }) {
   const neg = tier.ret < 0;
   const neon = neg ? RED : "#e879f9";
   const cols = Math.max(1, Math.floor((width - 12) / 16));
@@ -275,6 +277,7 @@ function Penthouse({ width, height, tier, cracked }) {
         <Windows cols={cols} rows={3} ret={tier.ret} seed={91} w={10} h={12} gapX={6} gapY={10} radius={1} dimColor="rgba(40,20,50,.9)" />
       </div>
       {(neg || cracked) && <Cracks intensity={cracked ? 2 : 1} />}
+      {children}
     </div>
   );
 }
@@ -357,6 +360,163 @@ function Sky() {
   );
 }
 
+/* Piani-asset dentro un livello: dal più grande (in basso) al più piccolo.
+   Altezza ∝ √peso nel livello, con un minimo per renderli cliccabili. */
+function floorLayout(tier, height, scale = 1) {
+  const n = tier.items.length;
+  // minimo ~16px a schermo, ma senza superare l'altezza del livello
+  const minFloor = Math.min(height / n, Math.max(9, 16 / scale));
+  const free = Math.max(0, height - n * minFloor);
+  const roots = tier.items.map((h) => Math.sqrt(h.value / tier.value));
+  const sum = roots.reduce((a, b) => a + b, 0) || 1;
+  const out = {};
+  let y = 0;
+  tier.items.forEach((h, i) => {
+    const hh = minFloor + (free * roots[i]) / sum;
+    out[h.isin] = { bottom: y, h: hh };
+    y += hh;
+  });
+  return out;
+}
+
+const assetRet = (h) => ((h.value - h.cost) / h.cost) * 100;
+const shortName = (s, n = 24) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
+
+function AssetFloors({ tier, height, width, scale, selected, onSelect }) {
+  const layout = floorLayout(tier, height, scale);
+  const fontSize = Math.max(6, 10.5 / scale);
+  const showLabels = width * scale >= 110;
+  return (
+    <motion.div className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+      {tier.items.map((h) => {
+        const f = layout[h.isin];
+        const sel = selected === h.isin;
+        const r = assetRet(h);
+        const w = (h.value / SNAPSHOT.total) * 100;
+        return (
+          <button
+            key={h.isin}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(h.isin);
+            }}
+            title={`${h.name} · ${pctPlain(w, 2)} · ${pct(r)}`}
+            aria-label={`${h.name}: ${pctPlain(w, 2)} del portafoglio, rendimento ${pct(r)}`}
+            aria-pressed={sel}
+            className={`absolute inset-x-0 flex items-center justify-between gap-1 overflow-hidden px-1 text-left font-mono leading-none transition-colors focus:outline-none focus-visible:bg-sky-400/30 ${
+              sel ? "bg-amber-300/30" : "bg-slate-950/40 hover:bg-white/15"
+            }`}
+            style={{
+              bottom: f.bottom,
+              height: f.h,
+              fontSize,
+              borderTop: "1px solid rgba(255,255,255,.28)",
+              boxShadow: sel ? "inset 0 0 0 1.5px #fcd34d, 0 0 14px rgba(252,211,77,.5)" : "none",
+              zIndex: sel ? 2 : 1,
+            }}
+          >
+            {showLabels && f.h * scale >= 12 && (
+              <>
+                <span className="truncate text-white" style={{ textShadow: "0 1px 2px #000" }}>
+                  {h.name}
+                </span>
+                <span className={`shrink-0 ${r >= 0 ? "text-emerald-200" : "text-rose-200"}`} style={{ textShadow: "0 1px 2px #000" }}>
+                  {pct(r, 0)}
+                </span>
+              </>
+            )}
+          </button>
+        );
+      })}
+    </motion.div>
+  );
+}
+
+/* Il muratore: indica dove ti trovi nell'edificio */
+function Mason({ walking, working, reduce }) {
+  const legT = walking && !reduce ? { duration: 0.45, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 };
+  return (
+    <svg width="30" height="44" viewBox="0 0 30 44" style={{ overflow: "visible", transform: "scaleX(-1)" }} aria-hidden="true">
+      <ellipse cx="15" cy="43" rx="8" ry="1.6" fill="#000" opacity="0.45" />
+      <motion.g style={{ originX: 0.5, originY: 0 }} animate={walking && !reduce ? { rotate: [18, -18, 18] } : { rotate: 0 }} transition={legT}>
+        <rect x="10.5" y="28" width="4" height="12" rx="1.6" fill="#1e3a8a" />
+        <rect x="9.5" y="38.5" width="6" height="3" rx="1" fill="#3f2a1d" />
+      </motion.g>
+      <motion.g style={{ originX: 0.5, originY: 0 }} animate={walking && !reduce ? { rotate: [-18, 18, -18] } : { rotate: 0 }} transition={legT}>
+        <rect x="15.5" y="28" width="4" height="12" rx="1.6" fill="#1d3577" />
+        <rect x="14.5" y="38.5" width="6" height="3" rx="1" fill="#3f2a1d" />
+      </motion.g>
+      <rect x="9" y="15" width="12" height="14" rx="2.5" fill="#f97316" />
+      <rect x="9" y="20.5" width="12" height="2" fill="#fde68a" />
+      <rect x="9" y="25" width="12" height="1.6" fill="#fde68a" />
+      <path d="M10 17 L6 25" stroke="#e8b98f" strokeWidth="3" strokeLinecap="round" />
+      <motion.g
+        style={{ originX: 0, originY: 0 }}
+        animate={working && !reduce ? { rotate: [0, -55, 0] } : { rotate: 0 }}
+        transition={working && !reduce ? { duration: 0.7, repeat: Infinity, repeatDelay: 0.5 } : { duration: 0.2 }}
+      >
+        <path d="M20 17 L25 23" stroke="#e8b98f" strokeWidth="3" strokeLinecap="round" />
+        <path d="M25 23 L27.5 13" stroke="#8b5a2b" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="24" y="10" width="7" height="4" rx="0.8" fill="#9ca3af" />
+      </motion.g>
+      <circle cx="15" cy="10" r="4.6" fill="#e8b98f" />
+      <path d="M9.3 9.2 a5.7 5.7 0 0 1 11.4 0 z" fill="#facc15" />
+      <rect x="8" y="8.6" width="14" height="1.9" rx="0.9" fill="#eab308" />
+    </svg>
+  );
+}
+
+function masonLine(focus, tiers, weights) {
+  if (!focus) return "Clicca un livello: ci salgo io.";
+  const t = tiers[focus.tier];
+  if (focus.isin) {
+    const h = t.items.find((x) => x.isin === focus.isin);
+    if (!h) return "";
+    const r = assetRet(h);
+    const name = shortName(h.name, 22);
+    if (r <= -15) return `${name}: ${pct(r)}. Qui c'è una crepa.`;
+    if (r < 0) return `${name}: ${pct(r)}. Qualche infiltrazione.`;
+    if (r >= 30) return `${name}: ${pct(r)}. Piano tutto acceso.`;
+    return `${name}: ${pct(r)}. In ordine.`;
+  }
+  const w = pctPlain(weights[focus.tier]);
+  if (focus.tier === "core") return `Fondamenta: ${w} del palazzo. ${t.ret >= 0 ? "Il cemento tiene." : "Vedo crepe."}`;
+  if (focus.tier === "sat") return `Piani intermedi: ${w}. ${t.ret >= 0 ? `Luci accese, ${pct(t.ret)}.` : `Luci spente, ${pct(t.ret)}.`}`;
+  return `Attico: ${w}. ${t.ret < 0 ? `Neon rossi, ${pct(t.ret)}.` : `Neon accesi, ${pct(t.ret)}.`}`;
+}
+
+/* Percorso del muratore: si sposta sulle scale a pioli di ogni livello e cammina sui tetti */
+function masonRoute(from, to, edges, bottoms) {
+  const pts = [{ x: from.x, y: from.y }];
+  const push = (x, y) => {
+    const l = pts[pts.length - 1];
+    if (Math.abs(l.x - x) > 0.5 || Math.abs(l.y - y) > 0.5) pts.push({ x, y });
+  };
+  let cur = { ...from };
+  if (from.lvl < to.lvl) {
+    for (let k = from.lvl; k < to.lvl; k++) {
+      push(edges[k], cur.y);
+      const top = bottoms[k + 1];
+      push(edges[k], top);
+      cur = { x: edges[k], y: top };
+    }
+  } else if (from.lvl > to.lvl) {
+    for (let k = from.lvl; k > to.lvl; k--) {
+      push(edges[k], cur.y);
+      const b = bottoms[k];
+      push(edges[k], b);
+      cur = { x: edges[k], y: b };
+    }
+  }
+  push(edges[to.lvl], cur.y);
+  push(to.x, to.y);
+  const d = [0];
+  for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.abs(pts[i].x - pts[i - 1].x) + Math.abs(pts[i].y - pts[i - 1].y));
+  const total = d[d.length - 1];
+  return { pts, times: total ? d.map((v) => v / total) : [0], total };
+}
+
 function Callout({ tier, meta, bottom, onOpen, weight, simulated }) {
   return (
     <button
@@ -376,25 +536,66 @@ function Callout({ tier, meta, bottom, onOpen, weight, simulated }) {
         </span>
         <Ret v={tier.ret}>{pct(tier.ret)}</Ret>
       </div>
-      <div className="mt-0.5 text-[11px] text-slate-400 group-hover:text-slate-200">Apri dettagli →</div>
+      <div className="mt-0.5 text-[11px] text-slate-400 group-hover:text-slate-200">Esplora {tier.items.length} piani →</div>
     </button>
   );
 }
 
-function Building({ weights, tiers, status, onOpen, simulated }) {
+const NAV_ITEMS = [
+  { id: null, label: "Vista d'insieme" },
+  { id: "core", label: "Fondamenta" },
+  { id: "sat", label: "Piani intermedi" },
+  { id: "att", label: "Attico" },
+];
+
+function SceneNav({ focus, setFocus }) {
+  const active = focus ? focus.tier : null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="inline-flex flex-wrap rounded-lg border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Naviga tra i livelli">
+        {NAV_ITEMS.map((it) => {
+          const on = active === it.id;
+          return (
+            <button
+              key={it.label}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setFocus(it.id ? { tier: it.id } : null)}
+              className={`relative rounded-md px-3 py-1.5 text-[12px] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                on ? "text-slate-950" : "text-slate-300 hover:text-white"
+              }`}
+            >
+              {on && <motion.span layoutId="navpill" className="absolute inset-0 rounded-md bg-sky-300" transition={{ type: "spring", stiffness: 400, damping: 34 }} />}
+              <span className="relative inline-flex items-center gap-1.5">
+                {it.id && <span className="h-2 w-2 rounded-sm" style={{ background: TIER_META[it.id].color }} />}
+                {it.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <span className="hidden text-[11px] text-slate-500 md:inline">
+        <kbd className="rounded border border-white/15 px-1">↑</kbd> <kbd className="rounded border border-white/15 px-1">↓</kbd> livelli ·{" "}
+        <kbd className="rounded border border-white/15 px-1">←</kbd> <kbd className="rounded border border-white/15 px-1">→</kbd> piani ·{" "}
+        <kbd className="rounded border border-white/15 px-1">Esc</kbd> indietro
+      </span>
+    </div>
+  );
+}
+
+function Building({ weights, tiers, status, focus, setFocus, nav, simulated }) {
   const ref = useRef(null);
   const sceneW = useWidth(ref);
   const reduce = useReducedMotion();
-  const compact = sceneW < 420;
+  const compact = sceneW < 520;
+  const sceneH = compact ? 560 : 620;
   const buildingArea = compact ? sceneW * 0.8 : Math.min(540, sceneW * 0.54);
   const widthOf = (t, min) => Math.max(min, buildingArea * Math.sqrt(Math.max(weights[t], 0) / 100));
-  const wCore = widthOf("core", 56);
-  const wSat = widthOf("sat", 44);
-  const wAtt = widthOf("att", 34);
+  const widths = { core: widthOf("core", 56), sat: widthOf("sat", 44), att: widthOf("att", 34) };
   const collapse = status.level === "collapse";
   const stress = status.level === "stress";
 
-  // Baricentro (altezza del centro di massa, pesi = % del portafoglio)
+  const bottoms = { core: 0, sat: H.core, att: H.core + H.sat };
   const centers = { core: H.core / 2, sat: H.core + H.sat / 2, att: H.core + H.sat + H.att / 2 };
   const totalW = weights.core + weights.sat + weights.att || 1;
   const cog = TIER_ORDER.reduce((s, t) => s + weights[t] * centers[t], 0) / totalW;
@@ -410,35 +611,110 @@ function Building({ weights, tiers, status, onOpen, simulated }) {
   const shakeT = collapse ? { duration: 0.9, repeat: Infinity, ease: "easeInOut" } : stress ? { duration: 3.2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.4 };
 
   const spring = { type: "spring", stiffness: 120, damping: 20 };
+  const camSpring = { type: "spring", stiffness: 70, damping: 18 };
   const buildCenterPx = compact ? sceneW / 2 : buildingArea / 2 + sceneW * 0.03;
-  const buildCenter = `${buildCenterPx}px`;
-  // gru: appoggiata sul tetto delle fondamenta se c'è spazio, altrimenti a terra
-  const upperHalf = Math.max(wSat, wAtt) / 2;
-  const craneOnPodium = wCore / 2 > upperHalf + 34;
-  const craneBottom = GROUND + (craneOnPodium ? H.core : 0);
+  const upperHalf = Math.max(widths.sat, widths.att) / 2;
+  const craneOnPodium = widths.core / 2 > upperHalf + 34;
+  const craneBottom = craneOnPodium ? H.core : 0;
   const craneH = H.sat + 70 + (craneOnPodium ? 0 : H.core);
 
-  const tierBtn = (t, children, delay) => (
-    <motion.div
-      role="button"
-      tabIndex={0}
-      aria-label={`${TIER_META[t].name}: ${pctPlain(weights[t])} del portafoglio, rendimento ${pct(tiers[t].ret)}. Apri dettagli`}
-      onClick={() => onOpen(t)}
-      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(t))}
-      className="cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-      style={{ transformOrigin: "50% 100%" }}
-      initial={{ scaleY: 0, opacity: 0 }}
-      animate={{ scaleY: 1, opacity: 1 }}
-      transition={{ delay, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-      whileHover={{ filter: "brightness(1.18)" }}
-    >
-      {children}
-    </motion.div>
+  /* Telecamera: zoom sul livello selezionato */
+  let cam = { s: 1, ty: 0 };
+  if (focus) {
+    const t = focus.tier;
+    const hT = H[t] + (t === "att" ? H.antenna : 0);
+    const availW = compact ? sceneW * 0.82 : sceneW * 0.5;
+    const s = Math.max(1, Math.min(2.4, availW / (widths[t] + 80), (sceneH * 0.7) / (hT + 30)));
+    const yT = sceneH * 0.5;
+    const ty = Math.max(0, yT - (sceneH - GROUND) + s * (bottoms[t] + hT / 2));
+    cam = { s, ty };
+  }
+
+  /* Muratore */
+  const edges = { [-1]: widths.core / 2 + 34, 0: widths.core / 2 + 12, 1: widths.sat / 2 + 12, 2: widths.att / 2 + 12 };
+  const lvlBottoms = { [-1]: 0, 0: bottoms.core, 1: bottoms.sat, 2: bottoms.att, 3: bottoms.att + H.att };
+  const target = (() => {
+    if (!focus) return { lvl: -1, x: edges[-1], y: 0 };
+    const lvl = TIER_ORDER.indexOf(focus.tier);
+    let y = bottoms[focus.tier];
+    if (focus.isin) {
+      const f = floorLayout(tiers[focus.tier], H[focus.tier], cam.s)[focus.isin];
+      if (f) y += f.bottom;
+    }
+    return { lvl, x: edges[lvl], y };
+  })();
+  const targetKey = focus ? `${focus.tier}|${focus.isin || ""}` : "overview";
+  const prevRef = useRef({ ...target, key: targetKey });
+  const [masonAnim, setMasonAnim] = useState({ x: target.x, y: -target.y, transition: { duration: 0 } });
+  const [walking, setWalking] = useState(false);
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (prev.key === targetKey) {
+      // stessa destinazione, cambiano solo le misure: si riposiziona senza camminare
+      setMasonAnim({ x: target.x, y: -target.y, transition: { duration: 0.4 } });
+    } else {
+      const { pts, times, total } = masonRoute(prev, target, edges, lvlBottoms);
+      const duration = reduce ? 0.01 : Math.min(3.2, Math.max(0.5, total / 150));
+      setWalking(!reduce);
+      setMasonAnim({ x: pts.map((p) => p.x), y: pts.map((p) => -p.y), transition: { duration, times, ease: "linear", delay: 0.15 } });
+    }
+    prevRef.current = { ...target, key: targetKey };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetKey, target.x, target.y]);
+  const line = masonLine(focus, tiers, weights);
+  const [talk, setTalk] = useState(true);
+  useEffect(() => {
+    if (walking) return setTalk(false);
+    setTalk(true);
+    const id = setTimeout(() => setTalk(false), 4500);
+    return () => clearTimeout(id);
+  }, [walking, line]);
+
+  const tierBtn = (t, children, delay) => {
+    const focused = focus?.tier === t;
+    const dim = focus && !focused;
+    return (
+      <motion.div
+        role={focused ? undefined : "button"}
+        tabIndex={focused ? undefined : 0}
+        aria-label={focused ? undefined : `${TIER_META[t].name}: ${pctPlain(weights[t])} del portafoglio, rendimento ${pct(tiers[t].ret)}. Esplora`}
+        onClick={() => (focused ? focus.isin && setFocus({ tier: t }) : setFocus({ tier: t }))}
+        onKeyDown={(e) => !focused && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setFocus({ tier: t }))}
+        className={`${focused ? "" : "cursor-pointer"} outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950`}
+        style={{ transformOrigin: "50% 100%" }}
+        initial={{ scaleY: 0, opacity: 0 }}
+        animate={{ scaleY: 1, opacity: dim ? 0.4 : 1 }}
+        transition={{ scaleY: { delay, duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }, opacity: { duration: 0.45, delay: focus ? 0 : delay * 0.3 } }}
+        whileHover={focused ? undefined : { filter: "brightness(1.2)" }}
+      >
+        {children}
+      </motion.div>
+    );
+  };
+  const floors = (t) => (
+    <AnimatePresence>
+      {focus?.tier === t && (
+        <AssetFloors
+          tier={tiers[t]}
+          height={H[t]}
+          width={widths[t]}
+          scale={cam.s}
+          selected={focus.isin}
+          onSelect={(isin) => setFocus({ tier: t, isin })}
+        />
+      )}
+    </AnimatePresence>
+  );
+
+  const explorer = (
+    <AnimatePresence mode="wait">
+      {focus && <Explorer key="explorer" focus={focus} setFocus={setFocus} nav={nav} tiers={tiers} weights={weights} simulated={simulated} compact={compact} />}
+    </AnimatePresence>
   );
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* banner crollo */}
+    <div id="cantiere" className="flex scroll-mt-4 flex-col gap-3">
+      <SceneNav focus={focus} setFocus={setFocus} />
       <AnimatePresence>
         {collapse && (
           <motion.div
@@ -466,92 +742,153 @@ function Building({ weights, tiers, status, onOpen, simulated }) {
           </motion.div>
         )}
       </AnimatePresence>
-    <div ref={ref} className="relative h-[620px] w-full overflow-hidden rounded-2xl border border-white/10">
-      <Sky />
 
-      {/* gru */}
-      {!compact && (
+      <div ref={ref} className="relative w-full overflow-hidden rounded-2xl border border-white/10" style={{ height: sceneH }}>
+        <Sky />
+
+        {/* livello telecamera */}
         <motion.div
-          className="absolute"
-          style={{ scaleX: -1 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1, left: buildCenterPx + upperHalf - 106, bottom: craneBottom }}
-          transition={{ type: "spring", stiffness: 120, damping: 20, opacity: { delay: 1.6 } }}
+          className="absolute inset-0"
+          style={{ transformOrigin: `${buildCenterPx}px ${sceneH - GROUND}px` }}
+          animate={{ scale: cam.s, y: cam.ty }}
+          transition={camSpring}
         >
-          <Crane height={craneH} reduce={reduce} />
-        </motion.div>
-      )}
+          {!compact && (
+            <motion.div
+              className="absolute"
+              style={{ scaleX: -1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: focus ? 0.35 : 1, left: buildCenterPx + upperHalf - 106, bottom: GROUND + craneBottom }}
+              transition={{ ...spring, opacity: { delay: focus ? 0 : 1.6 } }}
+            >
+              <Crane height={craneH} reduce={reduce} />
+            </motion.div>
+          )}
 
-      {/* palazzo */}
-      <div className="absolute flex flex-col items-center" style={{ bottom: GROUND, left: buildCenter, transform: "translateX(-50%)" }}>
-        <motion.div className="flex flex-col items-center" style={{ transformOrigin: "50% 100%" }} animate={shake} transition={shakeT}>
-          {tierBtn(
-            "att",
-            <div className="flex flex-col items-center">
-              <Antenna height={H.antenna} neg={tiers.att.ret < 0} reduce={reduce} />
-              <motion.div animate={{ width: wAtt }} transition={spring}>
-                <Penthouse width={wAtt} height={H.att} tier={tiers.att} cracked={collapse} />
+          {/* scale a pioli sulla facciata */}
+          {TIER_ORDER.map((t, k) => (
+            <motion.div
+              key={t}
+              className="pointer-events-none absolute w-[10px]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: focus ? 0.95 : 0.55, left: buildCenterPx + edges[k] - 5 }}
+              transition={{ ...spring, opacity: { delay: focus ? 0 : 1.8 } }}
+              style={{
+                bottom: GROUND + bottoms[t],
+                height: H[t],
+                borderLeft: "1.5px solid rgba(245,185,66,.7)",
+                borderRight: "1.5px solid rgba(245,185,66,.7)",
+                background: "repeating-linear-gradient(0deg, transparent 0 9px, rgba(245,185,66,.6) 9px 10.5px)",
+              }}
+            />
+          ))}
+
+          {/* palazzo */}
+          <div className="absolute flex flex-col items-center" style={{ bottom: GROUND, left: buildCenterPx, transform: "translateX(-50%)" }}>
+            <motion.div className="flex flex-col items-center" style={{ transformOrigin: "50% 100%" }} animate={shake} transition={shakeT}>
+              {tierBtn(
+                "att",
+                <div className="flex flex-col items-center">
+                  <Antenna height={H.antenna} neg={tiers.att.ret < 0} reduce={reduce} />
+                  <motion.div animate={{ width: widths.att }} transition={spring}>
+                    <Penthouse width={widths.att} height={H.att} tier={tiers.att} cracked={collapse}>
+                      {floors("att")}
+                    </Penthouse>
+                  </motion.div>
+                </div>,
+                1.1
+              )}
+              {tierBtn(
+                "sat",
+                <motion.div animate={{ width: widths.sat }} transition={spring}>
+                  <GlassFloors width={widths.sat} height={H.sat} tier={tiers.sat} cracked={collapse} reduce={reduce}>
+                    {floors("sat")}
+                  </GlassFloors>
+                </motion.div>,
+                0.55
+              )}
+            </motion.div>
+            {tierBtn(
+              "core",
+              <motion.div animate={{ width: widths.core }} transition={spring}>
+                <Foundation width={widths.core} height={H.core} tier={tiers.core} cracked={collapse}>
+                  {floors("core")}
+                </Foundation>
+              </motion.div>,
+              0
+            )}
+          </div>
+
+          {/* baricentro */}
+          <motion.div
+            className="pointer-events-none absolute flex items-center"
+            style={{ left: buildCenterPx - buildingArea / 2 - 8, width: buildingArea + 16 }}
+            animate={{ bottom: GROUND + cog, opacity: focus ? 0 : 1 }}
+            transition={spring}
+          >
+            <div className="h-0 flex-1 border-t border-dashed border-amber-200/70" />
+            <div className="ml-1 h-3 w-3 rotate-45 border border-amber-200 bg-amber-300/30" />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute whitespace-nowrap rounded bg-slate-950/75 px-1.5 py-0.5 font-mono text-[10px] text-amber-100/90"
+            style={{ left: buildCenterPx - buildingArea / 2 - 8 }}
+            animate={{ bottom: GROUND + cog + 6, opacity: focus ? 0 : 1 }}
+            transition={spring}
+          >
+            baricentro · {pctPlain((cog / structureH) * 100, 0)} dell'altezza
+          </motion.div>
+
+          {/* muratore */}
+          <motion.div
+            className="pointer-events-none absolute z-10"
+            style={{ left: buildCenterPx, bottom: GROUND }}
+            initial={false}
+            animate={{ x: masonAnim.x, y: masonAnim.y }}
+            transition={masonAnim.transition}
+            onAnimationComplete={() => setWalking(false)}
+          >
+            <motion.div style={{ originX: 0.5, originY: 1 }} animate={{ scale: 1 / cam.s }} transition={camSpring}>
+              <div className="relative -translate-x-1/2">
+                <Mason walking={walking} working={!walking && !!focus?.isin} reduce={reduce} />
+                <AnimatePresence>
+                  {talk && !walking && line && (
+                    <motion.div
+                      key={line}
+                      className="absolute bottom-[50px] right-[6px] w-max max-w-[190px] rounded-lg border border-amber-200/40 bg-slate-950/90 px-2.5 py-1.5 text-[11px] leading-snug text-amber-50 shadow-lg"
+                      initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                    >
+                      {line}
+                      <span className="absolute -bottom-[5px] right-3 h-2.5 w-2.5 rotate-45 border-b border-r border-amber-200/40 bg-slate-950" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+
+        {/* etichette (solo vista d'insieme) */}
+        <AnimatePresence>
+          {!compact &&
+            !focus &&
+            TIER_ORDER.map((t) => (
+              <motion.div key={t} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <Callout tier={tiers[t]} meta={TIER_META[t]} weight={weights[t]} simulated={simulated} onOpen={() => setFocus({ tier: t })} bottom={GROUND + centers[t]} />
               </motion.div>
-            </div>,
-            1.1
-          )}
-          {tierBtn(
-            "sat",
-            <motion.div animate={{ width: wSat }} transition={spring}>
-              <GlassFloors width={wSat} height={H.sat} tier={tiers.sat} cracked={collapse} reduce={reduce} />
-            </motion.div>,
-            0.55
-          )}
-        </motion.div>
-        {tierBtn(
-          "core",
-          <motion.div animate={{ width: wCore }} transition={spring}>
-            <Foundation width={wCore} height={H.core} tier={tiers.core} cracked={collapse} />
-          </motion.div>,
-          0
+            ))}
+        </AnimatePresence>
+
+        {simulated && (
+          <div className="absolute left-3 top-3 rounded-md border border-amber-300/40 bg-amber-400/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-amber-200">
+            Simulazione · pesi ipotetici
+          </div>
         )}
+
+        {!compact && explorer}
       </div>
-
-      {/* baricentro */}
-      <motion.div
-        className="pointer-events-none absolute flex items-center"
-        style={{ left: `calc(${buildCenter} - ${buildingArea / 2 + 8}px)`, width: buildingArea + 16 }}
-        animate={{ bottom: GROUND + cog }}
-        transition={spring}
-      >
-        <div className="h-0 flex-1 border-t border-dashed border-amber-200/70" />
-        <div className="ml-1 h-3 w-3 rotate-45 border border-amber-200 bg-amber-300/30" />
-      </motion.div>
-      <motion.div
-        className="pointer-events-none absolute whitespace-nowrap rounded bg-slate-950/75 px-1.5 py-0.5 font-mono text-[10px] text-amber-100/90"
-        style={{ left: `calc(${buildCenter} - ${buildingArea / 2 + 8}px)` }}
-        animate={{ bottom: GROUND + cog + 6 }}
-        transition={spring}
-      >
-        baricentro · {pctPlain((cog / structureH) * 100, 0)} dell'altezza
-      </motion.div>
-
-      {/* etichette */}
-      {!compact &&
-        TIER_ORDER.map((t) => (
-          <Callout
-            key={t}
-            tier={tiers[t]}
-            meta={TIER_META[t]}
-            weight={weights[t]}
-            simulated={simulated}
-            onOpen={() => onOpen(t)}
-            bottom={GROUND + centers[t]}
-          />
-        ))}
-
-      {simulated && (
-        <div className="absolute left-3 top-3 rounded-md border border-amber-300/40 bg-amber-400/10 px-2 py-1 font-mono text-[11px] uppercase tracking-wider text-amber-200">
-          Simulazione · pesi ipotetici
-        </div>
-      )}
-
-    </div>
+      {compact && explorer}
     </div>
   );
 }
@@ -691,131 +1028,181 @@ function CheckPanel({ weights, status, mode, setMode, sim, setSim, preset, setPr
   );
 }
 
-function Drawer({ tierId, tiers, weights, simulated, onClose }) {
-  const closeRef = useRef(null);
+function Explorer({ focus, setFocus, nav, tiers, weights, simulated, compact }) {
+  const t = tiers[focus.tier];
+  const m = TIER_META[focus.tier];
+  const idx = TIER_ORDER.indexOf(focus.tier);
+  const asset = focus.isin ? t.items.find((h) => h.isin === focus.isin) : null;
+  const listRef = useRef(null);
   useEffect(() => {
-    if (!tierId) return;
-    const onKey = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    closeRef.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
-  }, [tierId, onClose]);
+    if (!focus.isin || !listRef.current) return;
+    const el = listRef.current.querySelector(`[data-isin="${focus.isin}"]`);
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focus.isin]);
+
+  const navBtn = "rounded-md border border-white/10 px-2 py-1 text-[11px] text-slate-300 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
 
   return (
-    <AnimatePresence>
-      {tierId && (
-        <>
-          <motion.div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <motion.aside
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Dettagli ${TIER_META[tierId].name}`}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col border-l border-white/10 bg-[#0b1020] shadow-2xl"
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
-          >
-            {(() => {
-              const t = tiers[tierId];
-              const m = TIER_META[tierId];
-              return (
-                <>
-                  <div className="border-b border-white/10 p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="h-3 w-3 rounded-sm" style={{ background: m.color }} />
-                          <span className="font-mono text-[11px] uppercase tracking-wider text-slate-400">{m.tag}</span>
+    <motion.section
+      aria-label={`Esplora ${m.name}`}
+      className={`flex flex-col overflow-hidden rounded-xl border border-white/10 bg-[#080c19]/90 backdrop-blur ${
+        compact ? "max-h-[560px]" : "absolute bottom-3 right-3 top-3 w-[min(42%,370px)]"
+      }`}
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 24 }}
+      transition={{ type: "spring", stiffness: 260, damping: 30 }}
+    >
+      <div className="border-b border-white/10 p-4">
+        <nav aria-label="Percorso" className="flex flex-wrap items-center gap-1 text-[11px] text-slate-400">
+          <button type="button" className="hover:text-white focus:outline-none focus-visible:underline" onClick={() => setFocus(null)}>
+            Palazzo
+          </button>
+          <span aria-hidden="true">›</span>
+          {asset ? (
+            <button type="button" className="hover:text-white focus:outline-none focus-visible:underline" onClick={() => setFocus({ tier: focus.tier })}>
+              {m.name}
+            </button>
+          ) : (
+            <span className="text-slate-200">{m.name}</span>
+          )}
+          {asset && (
+            <>
+              <span aria-hidden="true">›</span>
+              <span className="truncate text-slate-200">{shortName(asset.name, 28)}</span>
+            </>
+          )}
+        </nav>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={focus.tier} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+            <div className="mt-2 flex items-center gap-2">
+              <span className="h-3 w-3 rounded-sm" style={{ background: m.color }} />
+              <h2 className="text-lg font-semibold text-slate-50">{m.name}</h2>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500">{m.tag}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">Valore</div>
+                <div className="font-mono text-[13px] text-slate-100">{eur(t.value, 0)}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">Peso</div>
+                <div className="font-mono text-[13px] text-slate-100">{pctPlain(t.weight)}</div>
+                {simulated && <div className="font-mono text-[10px] text-amber-300/80">sim {pctPlain(weights[focus.tier])}</div>}
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">Rendimento</div>
+                <Ret v={t.ret} className="font-mono text-[13px]">
+                  {pct(t.ret)}
+                </Ret>
+                <div className="font-mono text-[10px] text-slate-500">{eurSigned(t.pnl, 0)}</div>
+              </div>
+            </div>
+            {!asset && TIER_NOTES?.[focus.tier] && (
+              <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/5 p-2.5 text-[11.5px] leading-relaxed text-amber-100/90">{TIER_NOTES[focus.tier]}</p>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="flex items-center justify-between px-4 pb-1 pt-3 text-[10px] uppercase tracking-wider text-slate-500">
+        <span>{t.items.length} piani · dal più grande</span>
+        <span>peso · rend.</span>
+      </div>
+      <ul ref={listRef} className="flex-1 overflow-y-auto px-2 pb-2">
+        {t.items.map((h) => {
+          const r = assetRet(h);
+          const sel = h.isin === focus.isin;
+          const inTier = (h.value / t.value) * 100;
+          return (
+            <li key={h.isin} data-isin={h.isin}>
+              <button
+                type="button"
+                onClick={() => setFocus(sel ? { tier: focus.tier } : { tier: focus.tier, isin: h.isin })}
+                aria-expanded={sel}
+                className={`w-full rounded-lg px-2 py-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                  sel ? "bg-amber-300/10 ring-1 ring-amber-300/50" : "hover:bg-white/[0.04]"
+                }`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-[13px] text-slate-100">{h.name}</span>
+                  <span className="shrink-0 font-mono text-[12px]">
+                    <span className="text-slate-300">{pctPlain((h.value / SNAPSHOT.total) * 100, 2)}</span>{" "}
+                    <Ret v={r}>{pct(r)}</Ret>
+                  </span>
+                </div>
+                <div className="mt-1 h-1 w-full rounded-full bg-white/5">
+                  <div className="h-1 rounded-full" style={{ width: `${Math.max(inTier, 0.8)}%`, background: m.color }} />
+                </div>
+                <AnimatePresence initial={false}>
+                  {sel && (
+                    <motion.div
+                      className="overflow-hidden"
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25 }}
+                    >
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[11px]">
+                        <div>
+                          <dt className="text-slate-500">ISIN</dt>
+                          <dd className="text-slate-200">{h.isin}</dd>
                         </div>
-                        <h2 className="mt-1 text-xl font-semibold text-slate-50">{m.name}</h2>
-                        <p className="mt-1 text-[13px] text-slate-400">{m.blurb}</p>
-                      </div>
-                      <button
-                        ref={closeRef}
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-md border border-white/10 px-2 py-1 text-slate-300 hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-                        aria-label="Chiudi"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-500">Valore</div>
-                        <div className="font-mono text-sm text-slate-100">{eur(t.value, 0)}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-500">Peso reale</div>
-                        <div className="font-mono text-sm text-slate-100">{pctPlain(t.weight)}</div>
-                        {simulated && <div className="font-mono text-[10px] text-amber-300/80">sim {pctPlain(weights[tierId])}</div>}
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-500">Rendimento</div>
-                        <Ret v={t.ret} className="font-mono text-sm">
-                          {pct(t.ret)}
-                        </Ret>
-                        <div className="font-mono text-[11px] text-slate-400">{eurSigned(t.pnl, 0)}</div>
-                      </div>
-                    </div>
-                    {TIER_NOTES?.[tierId] && (
-                      <p className="mt-4 rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-[12px] leading-relaxed text-amber-100/90">{TIER_NOTES[tierId]}</p>
-                    )}
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    <table className="w-full text-left text-[13px]">
-                      <caption className="sr-only">Posizioni del livello {m.name}</caption>
-                      <thead className="sticky top-0 bg-[#0b1020] text-[10px] uppercase tracking-wider text-slate-500">
-                        <tr>
-                          <th className="px-5 py-2 font-medium">Asset</th>
-                          <th className="px-2 py-2 text-right font-medium">Peso</th>
-                          <th className="px-5 py-2 text-right font-medium">Rendimento</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {t.items.map((h, i) => {
-                          const r = ((h.value - h.cost) / h.cost) * 100;
-                          const inTier = (h.value / t.value) * 100;
-                          return (
-                            <motion.tr
-                              key={h.isin}
-                              className="border-t border-white/5 align-top"
-                              initial={{ opacity: 0, x: 16 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.05 + i * 0.03 }}
-                            >
-                              <td className="px-5 py-2.5">
-                                <div className="font-medium text-slate-100">{h.name}</div>
-                                <div className="font-mono text-[11px] text-slate-500">
-                                  {h.isin} · {h.kind}
-                                </div>
-                                <div className="mt-1.5 h-1 w-full max-w-[180px] rounded-full bg-white/5">
-                                  <div className="h-1 rounded-full" style={{ width: `${inTier}%`, background: m.color }} />
-                                </div>
-                                <div className="mt-0.5 text-[10px] text-slate-500">{pctPlain(inTier)} del livello</div>
-                              </td>
-                              <td className="px-2 py-2.5 text-right font-mono">
-                                <div className="text-slate-100">{pctPlain((h.value / SNAPSHOT.total) * 100, 2)}</div>
-                                <div className="text-[11px] text-slate-500">{eur(h.value, 0)}</div>
-                              </td>
-                              <td className="px-5 py-2.5 text-right font-mono">
-                                <Ret v={r}>{pct(r)}</Ret>
-                                <div className="text-[11px] text-slate-500">{eurSigned(h.value - h.cost, 0)}</div>
-                              </td>
-                            </motion.tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              );
-            })()}
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
+                        <div>
+                          <dt className="text-slate-500">Tipo</dt>
+                          <dd className="text-slate-200">{h.kind}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500">Controvalore</dt>
+                          <dd className="text-slate-200">{eur(h.value)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500">Costo FIFO</dt>
+                          <dd className="text-slate-200">{eur(h.cost)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500">Guadagno/perdita</dt>
+                          <dd>
+                            <Ret v={r}>{eurSigned(h.value - h.cost)}</Ret>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-500">Peso nel livello</dt>
+                          <dd className="text-slate-200">{pctPlain(inTier)}</dd>
+                        </div>
+                      </dl>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-3 py-2.5">
+        <div className="flex gap-1">
+          <button type="button" className={navBtn} onClick={() => nav.level(-1)} aria-label={idx === 0 ? "Torna alla vista d'insieme" : "Livello sotto"}>
+            ↓ {idx === 0 ? "Insieme" : TIER_META[TIER_ORDER[idx - 1]].name}
+          </button>
+          <button type="button" className={navBtn} onClick={() => nav.level(1)} disabled={idx === TIER_ORDER.length - 1} aria-label="Livello sopra">
+            ↑ {idx < TIER_ORDER.length - 1 ? TIER_META[TIER_ORDER[idx + 1]].name : "Cima"}
+          </button>
+        </div>
+        <div className="flex gap-1">
+          <button type="button" className={navBtn} onClick={() => nav.asset(-1)} aria-label="Piano precedente">
+            ‹
+          </button>
+          <span className="self-center font-mono text-[11px] text-slate-500">
+            {asset ? t.items.indexOf(asset) + 1 : "–"}/{t.items.length}
+          </span>
+          <button type="button" className={navBtn} onClick={() => nav.asset(1)} aria-label="Piano successivo">
+            ›
+          </button>
+        </div>
+      </div>
+    </motion.section>
   );
 }
 
@@ -829,7 +1216,49 @@ export default function App() {
   const [mode, setMode] = useState("real");
   const [preset, setPreset] = useState("real");
   const [sim, setSim] = useState({ sat: Math.round(realWeights.sat), att: Math.round(realWeights.att) });
-  const [open, setOpen] = useState(null);
+  const [focus, setFocusRaw] = useState(null); // null | { tier } | { tier, isin }
+  const setFocus = useCallback((f) => setFocusRaw(f), []);
+
+  const nav = useMemo(
+    () => ({
+      level: (dir) =>
+        setFocusRaw((f) => {
+          const i = f ? TIER_ORDER.indexOf(f.tier) : -1;
+          const n = Math.max(-1, Math.min(TIER_ORDER.length - 1, i + dir));
+          return n < 0 ? null : n === i ? f : { tier: TIER_ORDER[n] };
+        }),
+      asset: (dir) =>
+        setFocusRaw((f) => {
+          if (!f) return f;
+          const items = tiers[f.tier].items;
+          const i = f.isin ? items.findIndex((h) => h.isin === f.isin) : dir > 0 ? -1 : items.length;
+          const n = (i + dir + items.length) % items.length;
+          return { tier: f.tier, isin: items[n].isin };
+        }),
+      back: () => setFocusRaw((f) => (f?.isin ? { tier: f.tier } : null)),
+    }),
+    [tiers]
+  );
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target.tagName) || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === "Escape") return focus && (e.preventDefault(), nav.back());
+      if (!focus) return;
+      const map = { ArrowUp: () => nav.level(1), ArrowDown: () => nav.level(-1), ArrowRight: () => nav.asset(1), ArrowLeft: () => nav.asset(-1) };
+      if (map[e.key]) {
+        e.preventDefault();
+        map[e.key]();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focus, nav]);
+
+  const exploreTier = (t) => {
+    setFocus({ tier: t });
+    document.getElementById("cantiere")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const weights = mode === "real" ? realWeights : { sat: sim.sat, att: sim.att, core: Math.max(0, 100 - sim.sat - sim.att) };
   const status = structuralStatus(weights);
@@ -848,7 +1277,7 @@ export default function App() {
             <h1 className="mt-1 text-2xl font-semibold text-slate-50 sm:text-3xl">Il tuo portafoglio come un grattacielo</h1>
             <p className="mt-1 max-w-2xl text-[13px] text-slate-400">
               La larghezza di ogni livello è proporzionale al suo peso (scala a radice quadrata: le percentuali reali sono sulle etichette). Le luci
-              indicano il rendimento. Clicca su un livello per vederne il contenuto.
+              indicano il rendimento. Clicca su un livello per esplorarlo piano per piano: il muratore ti accompagna.
             </p>
           </div>
           <div className="text-right font-mono text-[11px] text-slate-500">
@@ -888,8 +1317,8 @@ export default function App() {
           </Kpi>
         </section>
 
-        <main className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_330px]">
-          <Building weights={weights} tiers={tiers} status={status} onOpen={setOpen} simulated={mode === "sim"} />
+        <main className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_330px]">
+          <Building weights={weights} tiers={tiers} status={status} focus={focus} setFocus={setFocus} nav={nav} simulated={mode === "sim"} />
           <CheckPanel weights={weights} status={status} mode={mode} setMode={setMode} sim={sim} setSim={setSim} preset={preset} setPreset={setPreset} />
         </main>
 
@@ -907,7 +1336,7 @@ export default function App() {
             </thead>
             <tbody>
               {[...TIER_ORDER].map((t) => (
-                <tr key={t} className="cursor-pointer border-t border-white/5 hover:bg-white/[0.03]" onClick={() => setOpen(t)}>
+                <tr key={t} className="cursor-pointer border-t border-white/5 hover:bg-white/[0.03]" onClick={() => exploreTier(t)}>
                   <td className="px-4 py-2.5">
                     <span className="inline-flex items-center gap-2 text-slate-100">
                       <span className="h-2.5 w-2.5 rounded-sm" style={{ background: TIER_META[t].color }} />
@@ -942,7 +1371,6 @@ export default function App() {
         </footer>
       </div>
 
-      <Drawer tierId={open} tiers={tiers} weights={weights} simulated={mode === "sim"} onClose={() => setOpen(null)} />
     </div>
   );
 }
